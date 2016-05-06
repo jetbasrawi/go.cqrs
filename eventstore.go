@@ -2,7 +2,7 @@ package ycq
 
 import (
 	"errors"
-	"github.com/jetbasrawi/yoono-uuid"
+	//"github.com/jetbasrawi/yoono-uuid"
 )
 
 // Error returned when no events are available to append.
@@ -28,15 +28,15 @@ type EventStore interface {
 }
 
 // AggregateRecord is a stored record of an aggregate in form of its events.
-type AggregateRecord interface {
-	AggregateID() uuid.UUID
-	Version() int
-	EventRecords() []EventRecord
-}
+//type AggregateRecord interface {
+//AggregateID() uuid.UUID
+//Version() int
+//EventRecords() []EventRecord
+//}
 
-// EventRecord is a single event record with timestamp
-type EventRecord interface {
-	Type() string
-	Version() int
-	Events() []EventMessage
-}
+//// EventRecord is a single event record with timestamp
+//type EventRecord interface {
+//Type() string
+//Version() int
+//Events() []EventMessage
+//}

@@ -79,7 +79,7 @@ func (r *CommonDomainRepository) Save(aggregate AggregateRoot) error {
 
 	expectedVersion := aggregate.Version() - 1
 
-	streamName, err := r.streamNameDelegate.GetStreamName(aggregate.AggregateType(), aggregate.AggregateID())
+	streamName, err := r.streamNameDelegate.GetStreamName(typeOf(aggregate), aggregate.AggregateID())
 	if err != nil {
 		return err
 	}

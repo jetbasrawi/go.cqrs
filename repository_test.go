@@ -60,7 +60,7 @@ func (s *ComDomRepoSuite) TestNoAggregateFactoryReturnsErrorOnLoad(c *C) {
 	s.repo.aggregateFactory = nil
 	id := yooid()
 
-	agg, err := s.repo.Load(NewSomeAggregate(id).AggregateType(), id)
+	agg, err := s.repo.Load(typeOf(NewSomeAggregate(id)), id)
 
 	c.Assert(err, NotNil)
 	c.Assert(err, ErrorMatches, "The common domain repository has no Aggregate Factory.")
@@ -69,11 +69,11 @@ func (s *ComDomRepoSuite) TestNoAggregateFactoryReturnsErrorOnLoad(c *C) {
 
 func (s *ComDomRepoSuite) TestRepositoryCanLoadAnAggregate(c *C) {
 	id := yooid()
-	agg, err := s.repo.Load(NewSomeAggregate(id).AggregateType(), id)
+	agg, err := s.repo.Load(typeOf(NewSomeAggregate(id)), id)
 
 	c.Assert(err, IsNil)
 	c.Assert(agg.AggregateID(), Equals, id)
-	c.Assert(agg.AggregateType(), Equals, NewSomeAggregate(id).AggregateType())
+	c.Assert(typeOf(agg), Equals, typeOf(NewSomeAggregate(id)))
 	c.Assert(agg.Version(), Equals, 0)
 }
 
@@ -88,7 +88,7 @@ func (s *ComDomRepoSuite) TestRepositoryCanLoadAggregateWithEvents(c *C) {
 	streamNameDelegate := NewDelegateStreamNamer()
 	_ = streamNameDelegate.RegisterDelegate(func(t string, id uuid.UUID) string { return t + id.String() }, &StubAggregate{})
 	s.repo.streamNameDelegate = streamNameDelegate
-	stream, _ := s.repo.streamNameDelegate.GetStreamName(agg.AggregateType(), id)
+	stream, _ := s.repo.streamNameDelegate.GetStreamName(typeOf(agg), id)
 	s.store.Save(stream, []EventMessage{ev}, nil, nil)
 
 	got, err := s.repo.Load(NewStubAggregate(yooid()).AggregateType(), id)
@@ -109,7 +109,7 @@ func (s *ComDomRepoSuite) TestRepositoryIncrementsAggregateVersionForEachEvent(c
 	streamNameDelegate := NewDelegateStreamNamer()
 	_ = streamNameDelegate.RegisterDelegate(func(t string, id uuid.UUID) string { return t + id.String() }, &StubAggregate{})
 	s.repo.streamNameDelegate = streamNameDelegate
-	stream, _ := s.repo.streamNameDelegate.GetStreamName(agg.AggregateType(), id)
+	stream, _ := s.repo.streamNameDelegate.GetStreamName(typeOf(agg), id)
 	ev1 := NewTestEventMessage(id)
 	ev2 := NewTestEventMessage(id)
 	ev3 := NewTestEventMessage(id)
@@ -129,7 +129,7 @@ func (s *ComDomRepoSuite) TestSaveAggregateWithUncommittedChanges(c *C) {
 	err := s.repo.Save(agg)
 
 	c.Assert(err, IsNil)
-	stream, _ := s.repo.streamNameDelegate.GetStreamName(agg.AggregateType(), agg.AggregateID())
+	stream, _ := s.repo.streamNameDelegate.GetStreamName(typeOf(agg), agg.AggregateID())
 	events, err := s.store.Load(stream)
 	c.Assert(err, IsNil)
 	c.Assert(events, DeepEquals, []EventMessage{ev})
@@ -139,7 +139,7 @@ func (s *ComDomRepoSuite) TestSaveAggregateWithUncommittedChanges(c *C) {
 
 func (s *ComDomRepoSuite) TestRepositoryReturnsAnErrorIfAggregateFactoryNotRegisteredForAnAggregate(c *C) {
 	id := yooid()
-	aggregateTypeName := NewSomeAggregate(yooid()).AggregateType()
+	aggregateTypeName := typeOf(NewSomeAggregate(yooid()))
 	s.repo.RegisterAggregateFactory(NewDelegateAggregateFactory())
 
 	agg, err := s.repo.Load(aggregateTypeName, id)
@@ -163,7 +163,7 @@ func (s *ComDomRepoSuite) TestStreamNameIsBuiltByStreamNameDelegateOnSave(c *C) 
 	err := s.repo.Save(agg)
 
 	c.Assert(err, IsNil)
-	c.Assert(s.store.stream, Equals, f(agg.AggregateType(), agg.AggregateID()))
+	c.Assert(s.store.stream, Equals, f(typeOf(agg), agg.AggregateID()))
 }
 
 func (s *ComDomRepoSuite) TestReturnsErrorOnSaveIfStreamNameDelegateNotRegistered(c *C) {
@@ -173,7 +173,7 @@ func (s *ComDomRepoSuite) TestReturnsErrorOnSaveIfStreamNameDelegateNotRegistere
 
 	c.Assert(err, DeepEquals,
 		fmt.Errorf("There is no stream name delegate for aggregate of type \"%s\"",
-			agg.AggregateType()))
+			typeOf(agg)))
 }
 
 func (s *ComDomRepoSuite) TestReturnsErrorOnSaveIfStreamNameDelegateIsNil(c *C) {
@@ -195,11 +195,11 @@ func (s *ComDomRepoSuite) TestReturnsErrorOnLoadIfStreamNameDelegateNotRegistere
 
 	ev := NewTestEventMessage(id)
 	s.store.Save(agg.AggregateID().String(), []EventMessage{ev}, nil, nil)
-	_, err := s.repo.Load(agg.AggregateType(), agg.AggregateID())
+	_, err := s.repo.Load(typeOf(agg), agg.AggregateID())
 	c.Assert(err, NotNil)
 	c.Assert(err, DeepEquals,
 		fmt.Errorf("There is no stream name delegate for aggregate of type \"%s\"",
-			agg.AggregateType()))
+			typeOf(agg)))
 }
 
 func (s *ComDomRepoSuite) TestReturnsErrorOnLoadIfStreamNameDelegateIsNil(c *C) {
@@ -219,12 +219,12 @@ func (s *ComDomRepoSuite) TestStreamNameIsBuiltByDelegateOnLoad(c *C) {
 	d := NewDelegateStreamNamer()
 	d.RegisterDelegate(f, agg)
 	s.repo.streamNameDelegate = d
-	s.store.Save(f(agg.AggregateType(), agg.AggregateID()), []EventMessage{ev}, nil, nil)
+	s.store.Save(f(typeOf(agg), agg.AggregateID()), []EventMessage{ev}, nil, nil)
 
-	_, err := s.repo.Load(agg.AggregateType(), agg.AggregateID())
+	_, err := s.repo.Load(typeOf(agg), agg.AggregateID())
 
 	c.Assert(err, IsNil)
-	c.Assert(s.store.loaded, Equals, f(agg.AggregateType(), agg.AggregateID()))
+	c.Assert(s.store.loaded, Equals, f(typeOf(agg), agg.AggregateID()))
 }
 
 //////////////////////////////////////////////////////////////////////////////

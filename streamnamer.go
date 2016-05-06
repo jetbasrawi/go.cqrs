@@ -21,7 +21,7 @@ func NewDelegateStreamNamer() *DelegateStreamNamer {
 
 func (r *DelegateStreamNamer) RegisterDelegate(delegate func(string, uuid.UUID) string, aggregates ...AggregateRoot) error {
 	for _, aggregate := range aggregates {
-		typeName := aggregate.AggregateType()
+		typeName := typeOf(aggregate)
 		if _, ok := r.delegates[typeName]; ok {
 			return fmt.Errorf("The stream name delegate for \"%s\" is already registered with the stream namer.",
 				typeName)

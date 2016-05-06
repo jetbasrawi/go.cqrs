@@ -31,7 +31,7 @@ func (h *AggregateCommandHandler) RegisterCommands(aggregate AggregateRoot, comm
 		if _, ok := h.aggregates[typeOf(cmd)]; ok {
 			return fmt.Errorf("The command \"%s\" is already registered with the dispatcher.", typeOf(cmd))
 		}
-		h.aggregates[typeOf(cmd)] = aggregate.AggregateType()
+		h.aggregates[typeOf(cmd)] = typeOf(aggregate)
 	}
 	return nil
 }

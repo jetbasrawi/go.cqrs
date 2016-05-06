@@ -70,10 +70,6 @@ func NewSomeAggregate(id uuid.UUID) AggregateRoot {
 	}
 }
 
-func (t *SomeAggregate) AggregateType() string {
-	return "SomeAggregate"
-}
-
 func (t *SomeAggregate) Apply(event EventMessage) {
 	t.events = append(t.events, event)
 }
@@ -91,10 +87,6 @@ func NewSomeOtherAggregate(id uuid.UUID) AggregateRoot {
 	return &SomeOtherAggregate{
 		AggregateBase: NewAggregateBase(id),
 	}
-}
-
-func (t *SomeOtherAggregate) AggregateType() string {
-	return "SomeOtherAggregate"
 }
 
 func (t *SomeOtherAggregate) Apply(event EventMessage) {

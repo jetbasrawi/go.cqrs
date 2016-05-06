@@ -4,7 +4,6 @@ import "github.com/jetbasrawi/yoono-uuid"
 
 type AggregateRoot interface {
 	AggregateID() uuid.UUID
-	AggregateType() string
 	Version() int
 	IncrementVersion()
 	Handle(CommandMessage) error

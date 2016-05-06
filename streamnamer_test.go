@@ -29,9 +29,9 @@ func (s *DelegateStreamNamerSuite) TestCanRegisterStreamNameDelegate(c *C) {
 	)
 	c.Assert(err, IsNil)
 	agg := NewSomeAggregate(yooid())
-	f, _ := s.namer.delegates[agg.AggregateType()]
-	stream := f(agg.AggregateType(), agg.AggregateID())
-	c.Assert(stream, Equals, agg.AggregateID().String()+agg.AggregateType())
+	f, _ := s.namer.delegates[typeOf(agg)]
+	stream := f(typeOf(agg), agg.AggregateID())
+	c.Assert(stream, Equals, agg.AggregateID().String()+typeOf(agg))
 }
 
 func (s *DelegateStreamNamerSuite) TestCanRegisterStreamNameDelegateWithMultipleAggregateRoots(c *C) {
@@ -42,14 +42,14 @@ func (s *DelegateStreamNamerSuite) TestCanRegisterStreamNameDelegateWithMultiple
 	c.Assert(err, IsNil)
 
 	ar1 := NewSomeAggregate(yooid())
-	f, _ := s.namer.delegates[ar1.AggregateType()]
-	stream := f(ar1.AggregateType(), ar1.AggregateID())
-	c.Assert(stream, Equals, ar1.AggregateID().String()+ar1.AggregateType())
+	f, _ := s.namer.delegates[typeOf(ar1)]
+	stream := f(typeOf(ar1), ar1.AggregateID())
+	c.Assert(stream, Equals, ar1.AggregateID().String()+typeOf(ar1))
 
 	ar2 := NewSomeOtherAggregate(yooid())
-	f2, _ := s.namer.delegates[ar2.AggregateType()]
-	stream2 := f2(ar2.AggregateType(), ar2.AggregateID())
-	c.Assert(stream2, Equals, ar2.AggregateID().String()+ar2.AggregateType())
+	f2, _ := s.namer.delegates[typeOf(ar2)]
+	stream2 := f2(typeOf(ar2), ar2.AggregateID())
+	c.Assert(stream2, Equals, ar2.AggregateID().String()+typeOf(ar2))
 }
 
 func (s *DelegateStreamNamerSuite) TestCanGetStreamName(c *C) {
@@ -58,9 +58,9 @@ func (s *DelegateStreamNamerSuite) TestCanGetStreamName(c *C) {
 	)
 	c.Assert(err, IsNil)
 	agg := NewSomeAggregate(yooid())
-	stream, err := s.namer.GetStreamName(agg.AggregateType(), agg.AggregateID())
+	stream, err := s.namer.GetStreamName(typeOf(agg), agg.AggregateID())
 	c.Assert(err, IsNil)
-	c.Assert(stream, Equals, agg.AggregateID().String()+agg.AggregateType())
+	c.Assert(stream, Equals, agg.AggregateID().String()+typeOf(agg))
 }
 
 func (s *DelegateStreamNamerSuite) TestGetStreamNameReturnsAnErrorIfNoDelegateRegisteredForAggregate(c *C) {
@@ -68,11 +68,11 @@ func (s *DelegateStreamNamerSuite) TestGetStreamNameReturnsAnErrorIfNoDelegateRe
 		&SomeAggregate{},
 	)
 	agg := NewSomeOtherAggregate(yooid())
-	stream, err := s.namer.GetStreamName(agg.AggregateType(), agg.AggregateID())
+	stream, err := s.namer.GetStreamName(typeOf(agg), agg.AggregateID())
 	c.Assert(err, NotNil)
 	c.Assert(stream, Equals, "")
 	c.Assert(err, DeepEquals, fmt.Errorf("There is no stream name delegate for aggregate of type \"%s\"",
-		agg.AggregateType()))
+		typeOf(agg)))
 
 }
 
@@ -88,5 +88,5 @@ func (s *DelegateStreamNamerSuite) TestRegisteringAStreamNameDelegateMoreThanOnc
 	)
 	c.Assert(err, DeepEquals,
 		fmt.Errorf("The stream name delegate for \"%s\" is already registered with the stream namer.",
-			NewSomeAggregate(yooid()).AggregateType()))
+			typeOf(NewSomeAggregate(yooid()))))
 }

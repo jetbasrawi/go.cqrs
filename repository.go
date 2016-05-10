@@ -1,7 +1,7 @@
 package ycq
 
 import (
-	//"encoding/json"
+	"encoding/json"
 	"fmt"
 
 	"github.com/jetbasrawi/goes"
@@ -13,23 +13,6 @@ type DomainRepository interface {
 
 	Save(AggregateRoot) error
 }
-
-//type GESRepositoryClient struct {
-//client *goes.Client
-//}
-
-//func (c *GESRepositoryClient) ReadStreamForwardAsync(stream string, version *goes.StreamVersion, take *goes.Take) <-chan struct {
-//*goes.EventResponse
-//*goes.Response
-//error
-//} {
-//ch := c.client.ReadStreamForwardAsync(stream, version, take)
-//return ch
-//}
-
-//func (c GESRepositoryClient) AppendToStream(stream string, version *goes.StreamVersion, events ...*goes.Event) (*goes.Response, error) {
-//return c.client.AppendToStream(stream, version, events)
-//}
 
 type CommonDomainRepository struct {
 	eventStore         GetEventStoreRepositoryClient
@@ -70,48 +53,52 @@ func (r *CommonDomainRepository) Load(aggregateType string, id uuid.UUID) (Aggre
 		return nil, fmt.Errorf("The common domain repository has no stream name delegate.")
 	}
 
+	if r.eventFactory == nil {
+		return nil, fmt.Errorf("The common domain has no Event Factory.")
+	}
+
 	aggregate := r.aggregateFactory.GetAggregate(aggregateType, id)
 	if aggregate == nil {
 		return nil, fmt.Errorf("The repository has no aggregate factory registered for aggregate type: %s", aggregateType)
 	}
 
-	_, err := r.streamNameDelegate.GetStreamName(aggregateType, id)
+	stream, err := r.streamNameDelegate.GetStreamName(aggregateType, id)
 	if err != nil {
 		return nil, err
 	}
 
-	//eventsChannel := r.eventStore.ReadStreamForwardAsync(stream, nil, nil)
+	eventsChannel := r.eventStore.ReadStreamForwardAsync(stream, nil, nil)
 
-	//for {
-	//select {
-	//case ev, open := <-eventsChannel:
-	//if !open {
-	//break
-	//}
+	for {
+		select {
+		case ev, open := <-eventsChannel:
+			if !open {
+				return aggregate, nil
+			}
 
-	//if ev.error != nil {
-	////TODO
-	//}
+			if ev.Err != nil {
+				//TODO
+			}
 
-	//event := r.eventFactory.GetEvent(ev.EventResponse.Event.EventType)
-	//if event == nil {
-	//return nil, fmt.Errorf("The event type %s is not registered with the eventstore.", ev.EventResponse.Event.EventType)
-	//}
+			event := r.eventFactory.GetEvent(ev.EventResp.Event.EventType)
+			if event == nil {
+				return nil, fmt.Errorf("The event type %s is not registered with the eventstore.", ev.EventResp.Event.EventType)
+			}
 
-	//if data, ok := ev.EventResponse.Event.Data.(*json.RawMessage); ok {
-	//if err := json.Unmarshal(*data, event); err != nil {
-	//return nil, err
-	//}
-	//}
+			data, ok := ev.EventResp.Event.Data.(*json.RawMessage)
+			if !ok {
+				return nil, fmt.Errorf("Common domain repository could not unmarshal even. Event data is not of type *json.RawMessage")
+			}
 
-	//em := NewEventMessage(id, event)
-	//aggregate.Apply(em)
-	//aggregate.IncrementVersion()
+			if err := json.Unmarshal(*data, event); err != nil {
+				return nil, err
+			}
+			em := NewEventMessage(id, event)
+			aggregate.Apply(em)
+			aggregate.IncrementVersion()
 
-	//}
-	//}
-
-	return aggregate, nil
+		}
+	}
 }
 
 // Save  persists an aggregate

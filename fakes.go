@@ -7,11 +7,7 @@ import (
 )
 
 type GetEventStoreRepositoryClient interface {
-	ReadStreamForwardAsync(string, *goes.StreamVersion, *goes.Take) <-chan struct {
-		goes.EventResponse
-		goes.Response
-		error
-	}
+	ReadStreamForwardAsync(string, *goes.StreamVersion, *goes.Take) <-chan *goes.AsyncResponse
 	AppendToStream(string, *goes.StreamVersion, ...*goes.Event) (*goes.Response, error)
 }
 
@@ -26,25 +22,14 @@ func NewFakeAsyncClient() *FakeAsyncReader {
 	return fake
 }
 
-func (c *FakeAsyncReader) ReadStreamForwardAsync(stream string, version *goes.StreamVersion, take *goes.Take) <-chan struct {
-	*goes.EventResponse
-	*goes.Response
-	error
-} {
+func (c *FakeAsyncReader) ReadStreamForwardAsync(stream string, version *goes.StreamVersion, take *goes.Take) <-chan *goes.AsyncResponse {
 
-	eventsChannel := make(chan struct {
-		*goes.EventResponse
-		*goes.Response
-		error
-	})
+	c.stream = stream
+	eventsChannel := make(chan *goes.AsyncResponse)
 
 	go func() {
 		for _, v := range c.eventResponses {
-			eventsChannel <- struct {
-				*goes.EventResponse
-				*goes.Response
-				error
-			}{v, nil, nil}
+			eventsChannel <- &goes.AsyncResponse{v, nil, nil}
 		}
 		close(eventsChannel)
 		return
@@ -56,6 +41,7 @@ func (c *FakeAsyncReader) ReadStreamForwardAsync(stream string, version *goes.St
 
 func (c *FakeAsyncReader) AppendToStream(stream string, expectedVersion *goes.StreamVersion, events ...*goes.Event) (*goes.Response, error) {
 	c.appended = events
+	c.stream = stream
 	r := &goes.Response{
 		StatusCode:    http.StatusCreated,
 		StatusMessage: "201 Created",

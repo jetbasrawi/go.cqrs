@@ -2,7 +2,6 @@ package ycq
 
 import (
 	"fmt"
-
 	"github.com/jetbasrawi/goes"
 	"github.com/jetbasrawi/yoono-uuid"
 	. "gopkg.in/check.v1"
@@ -11,15 +10,21 @@ import (
 var _ = Suite(&ComDomRepoSuite{})
 
 type ComDomRepoSuite struct {
-	store *FakeAsyncReader
-	repo  *CommonDomainRepository
+	store          *FakeAsyncReader
+	repo           *CommonDomainRepository
+	someEvent      *SomeEvent
+	someOtherEvent *SomeOtherEvent
 }
 
 func (s *ComDomRepoSuite) SetUpTest(c *C) {
 	store := NewFakeAsyncClient()
 	stream := "astream"
-
-	es := goes.CreateTestEvents(10, stream, "server", "SomeEventType")
+	server := "http://localhost:2113"
+	s.someEvent = &SomeEvent{Item: "Some Item", Count: 42}
+	goesEvent := goes.CreateTestEventFromData(stream, server, 0, s.someEvent, nil)
+	s.someOtherEvent = &SomeOtherEvent{yooid()}
+	goesOtherEvent := goes.CreateTestEventFromData(stream, server, 1, s.someOtherEvent, nil)
+	es := []*goes.Event{goesEvent, goesOtherEvent}
 	ers := goes.CreateTestEventResponses(es, nil)
 	store.eventResponses = ers
 	store.stream = stream
@@ -28,17 +33,30 @@ func (s *ComDomRepoSuite) SetUpTest(c *C) {
 	s.repo, _ = NewCommonDomainRepository(s.store)
 
 	aggregateFactory := NewDelegateAggregateFactory()
-	aggregateFactory.RegisterDelegate(&SomeAggregate{}, func(id uuid.UUID) AggregateRoot { return NewSomeAggregate(id) })
+	aggregateFactory.RegisterDelegate(&SomeAggregate{},
+		func(id uuid.UUID) AggregateRoot { return NewSomeAggregate(id) })
 	s.repo.aggregateFactory = aggregateFactory
 
 	streamNameDelegate := NewDelegateStreamNamer()
-	streamNameDelegate.RegisterDelegate(func(at string, id uuid.UUID) string { return at + id.String() }, &SomeAggregate{})
+	streamNameDelegate.RegisterDelegate(func(at string, id uuid.UUID) string { return at + id.String() },
+		&SomeAggregate{},
+		&SomeOtherAggregate{},
+		&StubAggregate{})
 	s.repo.streamNameDelegate = streamNameDelegate
+
+	eventFactory := NewDelegateEventFactory()
+	eventFactory.RegisterDelegate(&SomeEvent{},
+		func() interface{} { return &SomeEvent{} })
+	eventFactory.RegisterDelegate(&SomeOtherEvent{},
+		func() interface{} { return &SomeOtherEvent{} })
+	s.repo.SetEventFactory(eventFactory)
 }
 
 func (s *ComDomRepoSuite) TestCanConstructNewRepository(c *C) {
 	store, _ := goes.NewClient(nil, "")
+
 	repo, err := NewCommonDomainRepository(store)
+
 	c.Assert(repo, NotNil)
 	c.Assert(err, IsNil)
 	c.Assert(repo.aggregateFactory, IsNil)
@@ -47,14 +65,74 @@ func (s *ComDomRepoSuite) TestCanConstructNewRepository(c *C) {
 
 func (s *ComDomRepoSuite) TestCreatingNewRepositoryWithNilEventStoreReturnsAnError(c *C) {
 	repo, err := NewCommonDomainRepository(nil)
+
 	c.Assert(repo, IsNil)
 	c.Assert(err, DeepEquals, fmt.Errorf("Nil Eventstore injected into repository."))
+}
+
+func (s *ComDomRepoSuite) TestRepositoryCanLoadAnAggregate(c *C) {
+	s.store.eventResponses = []*goes.EventResponse{}
+	id := yooid()
+
+	agg, err := s.repo.Load(typeOf(&SomeAggregate{}), id)
+
+	c.Assert(err, IsNil)
+	c.Assert(agg.AggregateID(), Equals, id)
+	c.Assert(typeOf(agg), Equals, typeOf(NewSomeAggregate(id)))
+	c.Assert(agg.Version(), Equals, 0)
+}
+
+func (s *ComDomRepoSuite) TestRepositoryCanLoadAggregateWithEvents(c *C) {
+	id := yooid()
+	aggregateFactory := NewDelegateAggregateFactory()
+	aggregateFactory.RegisterDelegate(&StubAggregate{},
+		func(id uuid.UUID) AggregateRoot { return NewStubAggregate(id) })
+	s.repo.SetAggregateFactory(aggregateFactory)
+
+	got, err := s.repo.Load(typeOf(&StubAggregate{}), id)
+
+	c.Assert(err, IsNil)
+	c.Assert(got.AggregateID(), Equals, id)
+
+	events := got.(*StubAggregate).events
+	c.Assert(events[0].Event(), DeepEquals, s.someEvent)
+	c.Assert(events[1].Event(), DeepEquals, s.someOtherEvent)
+}
+
+func (s *ComDomRepoSuite) TestRepositoryIncrementsAggregateVersionForEachEvent(c *C) {
+	stream := "astream"
+	server := "http://localhost:2113"
+	ev1 := goes.CreateTestEventFromData(stream, server, 0, &SomeEvent{Item: "Some Item", Count: 42}, nil)
+	ev2 := goes.CreateTestEventFromData(stream, server, 0, &SomeEvent{Item: "Some Item", Count: 42}, nil)
+	ev3 := goes.CreateTestEventFromData(stream, server, 0, &SomeEvent{Item: "Some Item", Count: 42}, nil)
+	es := []*goes.Event{ev1, ev2, ev3}
+	s.store.eventResponses = goes.CreateTestEventResponses(es, nil)
+	id := yooid()
+
+	got, _ := s.repo.Load(typeOf(&SomeAggregate{}), id)
+
+	c.Assert(got.Version(), Equals, 3)
+}
+
+func (s *ComDomRepoSuite) TestSaveAggregateWithUncommittedChanges(c *C) {
+	s.store.eventResponses = []*goes.EventResponse{}
+	id := yooid()
+	agg := NewSomeAggregate(id)
+	ev := &SomeEvent{Item: "Some string", Count: 4353}
+	em := NewEventMessage(id, ev)
+	agg.TrackChange(em)
+
+	err := s.repo.Save(agg)
+
+	c.Assert(err, IsNil)
+	c.Assert(s.store.appended[0].Data, DeepEquals, ev)
 }
 
 func (s *ComDomRepoSuite) TestCanRegisterAggregateFactory(c *C) {
 	aggregateFactory := NewDelegateAggregateFactory()
 
 	s.repo.SetAggregateFactory(aggregateFactory)
+
 	c.Assert(s.repo.aggregateFactory, Equals, aggregateFactory)
 }
 
@@ -69,190 +147,123 @@ func (s *ComDomRepoSuite) TestNoAggregateFactoryReturnsErrorOnLoad(c *C) {
 	c.Assert(agg, IsNil)
 }
 
-func (s *ComDomRepoSuite) TestRepositoryCanLoadAnAggregate(c *C) {
+func (s *ComDomRepoSuite) TestRepositoryReturnsAnErrorIfAggregateFactoryNotRegisteredForAnAggregate(c *C) {
+	aggregateFactory := NewDelegateAggregateFactory()
+	aggregateFactory.RegisterDelegate(&SomeOtherAggregate{}, func(id uuid.UUID) AggregateRoot { return NewSomeOtherAggregate(id) })
+	s.repo.SetAggregateFactory(aggregateFactory)
+
 	id := yooid()
-	agg, err := s.repo.Load(typeOf(NewSomeAggregate(id)), id)
+	aggregateTypeName := typeOf(&SomeAggregate{})
+	agg, err := s.repo.Load(aggregateTypeName, id)
+
+	c.Assert(err, DeepEquals,
+		fmt.Errorf("The repository has no aggregate factory registered for aggregate type: %s",
+			aggregateTypeName))
+	c.Assert(agg, IsNil)
+}
+
+func (s *ComDomRepoSuite) TestCanRegisterStreamNameDelegate(c *C) {
+	d := NewDelegateStreamNamer()
+
+	s.repo.SetStreamNameDelegate(d)
+
+	c.Assert(s.repo.streamNameDelegate, Equals, d)
+}
+
+func (s *ComDomRepoSuite) TestReturnsErrorOnLoadIfStreamNameDelegateNotRegisteredForAggregate(c *C) {
+	id := yooid()
+	streamNameDelegate := NewDelegateStreamNamer()
+	streamNameDelegate.RegisterDelegate(func(t string, id uuid.UUID) string { return "something" },
+		&SomeOtherAggregate{})
+	s.repo.SetStreamNameDelegate(streamNameDelegate)
+	typeName := typeOf(&SomeAggregate{})
+
+	agg, err := s.repo.Load(typeName, id)
+
+	c.Assert(agg, IsNil)
+	c.Assert(err, DeepEquals,
+		fmt.Errorf("There is no stream name delegate for aggregate of type \"%s\"",
+			typeName))
+}
+
+func (s *ComDomRepoSuite) TestStreamNameIsBuiltByStreamNameDelegateOnSave(c *C) {
+	id := yooid()
+	agg := NewSomeAggregate(id)
+	f := func(t string, id uuid.UUID) string { return "BoundedContext-" + id.String() }
+	d := NewDelegateStreamNamer()
+	d.RegisterDelegate(f, agg)
+	s.repo.streamNameDelegate = d
+	ev := NewTestEventMessage(id)
+	agg.TrackChange(ev)
+
+	err := s.repo.Save(agg)
 
 	c.Assert(err, IsNil)
-	c.Assert(agg.AggregateID(), Equals, id)
-	c.Assert(typeOf(agg), Equals, typeOf(NewSomeAggregate(id)))
-	c.Assert(agg.Version(), Equals, 0)
+	c.Assert(s.store.stream, Equals, f(typeOf(agg), agg.AggregateID()))
 }
 
-func (s *ComDomRepoSuite) TestRepositoryCanLoadAggregateWithEvents(c *C) {
+func (s *ComDomRepoSuite) TestStreamNameIsBuiltByDelegateOnLoad(c *C) {
+	id := yooid()
+	agg := NewSomeAggregate(id)
+	f := func(t string, id uuid.UUID) string { return "xyz-" + id.String() }
+	d := NewDelegateStreamNamer()
+	d.RegisterDelegate(f, agg)
+	s.repo.streamNameDelegate = d
 
-	//id := yooid()
-	//ev := &SomeEvent{Item: "Some Item", Count: 345}
-	//evs := goes.CreateTestEventsFromData(ev)
-	//er := goes.CreateTestEventResponses(evs, nil)
+	_, err := s.repo.Load(typeOf(agg), agg.AggregateID())
 
-	//store := NewFakeAsyncClient()
-	//store.eventResponses = er
-	//s.repo, _ = NewCommonDomainRepository(store)
-
-	//streamNameDelegate := NewDelegateStreamNamer()
-	//_ = streamNameDelegate.RegisterDelegate(func(t string, id uuid.UUID) string { return t + id.String() }, &StubAggregate{})
-	//s.repo.streamNameDelegate = streamNameDelegate
-	//store.stream, _ = s.repo.streamNameDelegate.GetStreamName(typeOf(&StubAggregate{}), id)
-
-	//af := NewDelegateAggregateFactory()
-	//_ = af.RegisterDelegate(&StubAggregate{},
-	//func(id uuid.UUID) AggregateRoot { return NewStubAggregate(id) })
-	//s.repo.SetAggregateFactory(af)
-	//ef := NewDelegateEventFactory()
-	//_ = ef.RegisterDelegate(&SomeEvent{}, func() interface{} { return &SomeEvent{} })
-	//_ = ef.RegisterDelegate(&SomeOtherEvent{}, func() interface{} { return &SomeOtherEvent{} })
-	//s.repo.SetEventFactory(ef)
-
-	//got, err := s.repo.Load(NewStubAggregate(yooid()).AggregateType(), id)
-
-	//c.Assert(err, IsNil)
-	//c.Assert(got.AggregateID(), Equals, id)
-	//c.Assert(got.Version(), Equals, 1)
-	//c.Assert(got.(*StubAggregate).event, DeepEquals, NewEventMessage(id, ev))
+	c.Assert(err, IsNil)
+	c.Assert(s.store.stream, Equals, f(typeOf(agg), agg.AggregateID()))
 }
 
-//func (s *ComDomRepoSuite) TestRepositoryIncrementsAggregateVersionForEachEvent(c *C) {
-//af := NewDelegateAggregateFactory()
-//_ = af.RegisterDelegate(&StubAggregate{},
-//func(id uuid.UUID) AggregateRoot { return NewStubAggregate(id) })
-//s.repo.SetAggregateFactory(af)
-//id := yooid()
-//agg := NewStubAggregate(id)
-//streamNameDelegate := NewDelegateStreamNamer()
-//_ = streamNameDelegate.RegisterDelegate(func(t string, id uuid.UUID) string { return t + id.String() }, &StubAggregate{})
-//s.repo.streamNameDelegate = streamNameDelegate
-//stream, _ := s.repo.streamNameDelegate.GetStreamName(typeOf(agg), id)
-//ev1 := NewTestEventMessage(id)
-//ev2 := NewTestEventMessage(id)
-//ev3 := NewTestEventMessage(id)
-//s.store.Save(stream, []EventMessage{ev1, ev2, ev3}, nil, nil)
+func (s *ComDomRepoSuite) TestReturnsErrorOnSaveIfStreamNameDelegateNotRegisteredForAnAggregate(c *C) {
+	streamNameDelegate := NewDelegateStreamNamer()
+	streamNameDelegate.RegisterDelegate(func(t string, id uuid.UUID) string { return "something" })
+	s.repo.SetStreamNameDelegate(streamNameDelegate)
+	agg := NewSomeAggregate(yooid())
 
-//got, _ := s.repo.Load(NewStubAggregate(yooid()).AggregateType(), id)
+	err := s.repo.Save(agg)
 
-//c.Assert(got.Version(), Equals, 3)
-//}
+	c.Assert(err, DeepEquals,
+		fmt.Errorf("There is no stream name delegate for aggregate of type \"%s\"",
+			typeOf(agg)))
+}
 
-//func (s *ComDomRepoSuite) TestSaveAggregateWithUncommittedChanges(c *C) {
-//id := yooid()
-//agg := NewSomeAggregate(id)
-//ev := NewTestEventMessage(id)
-//agg.TrackChange(ev)
+func (s *ComDomRepoSuite) TestReturnsErrorOnSaveIfStreamNameDelegateIsNil(c *C) {
+	s.repo.streamNameDelegate = nil
+	agg := NewSomeAggregate(yooid())
 
-//err := s.repo.Save(agg)
+	err := s.repo.Save(agg)
 
-//c.Assert(err, IsNil)
-//stream, _ := s.repo.streamNameDelegate.GetStreamName(typeOf(agg), agg.AggregateID())
-//events, err := s.store.Load(stream)
-//c.Assert(err, IsNil)
-//c.Assert(events, DeepEquals, []EventMessage{ev})
-//c.Assert(agg.GetChanges(), DeepEquals, []EventMessage{})
-//c.Assert(agg.Version(), Equals, 0)
-//}
+	c.Assert(err, NotNil)
+	c.Assert(err, DeepEquals, fmt.Errorf("The common domain repository has no stream name delagate."))
+}
 
-//func (s *ComDomRepoSuite) TestRepositoryReturnsAnErrorIfAggregateFactoryNotRegisteredForAnAggregate(c *C) {
-//id := yooid()
-//aggregateTypeName := typeOf(NewSomeAggregate(yooid()))
-//s.repo.SetAggregateFactory(NewDelegateAggregateFactory())
+func (s *ComDomRepoSuite) TestReturnsErrorOnLoadIfStreamNameDelegateIsNil(c *C) {
+	s.repo.streamNameDelegate = nil
 
-//agg, err := s.repo.Load(aggregateTypeName, id)
+	_, err := s.repo.Load("", yooid())
 
-//c.Assert(err, DeepEquals,
-//fmt.Errorf("The repository has no aggregate factory registered for aggregate type: %s",
-//aggregateTypeName))
-//c.Assert(agg, IsNil)
-//}
+	c.Assert(err, NotNil)
+	c.Assert(err, DeepEquals, fmt.Errorf("The common domain repository has no stream name delegate."))
+}
 
-//func (s *ComDomRepoSuite) TestCanRegisterStreamNameDelegate(c *C) {
+func (s *ComDomRepoSuite) TestReturnsErrorOnLoadIfEventFactoryNotRegistered(c *C) {
+	s.repo.eventFactory = nil
 
-//d := NewDelegateStreamNamer()
-//s.repo.SetStreamNameDelegate(d)
-//c.Assert(s.repo.streamNameDelegate, Equals, d)
+	agg, err := s.repo.Load(typeOf(&SomeAggregate{}), yooid())
 
-//}
+	c.Assert(err, DeepEquals, fmt.Errorf("The common domain has no Event Factory."))
+	c.Assert(agg, IsNil)
+}
 
-//func (s *ComDomRepoSuite) TestStreamNameIsBuiltByStreamNameDelegateOnSave(c *C) {
-//id := yooid()
-//agg := NewSomeAggregate(id)
-//f := func(t string, id uuid.UUID) string { return "BoundedContext-" + id.String() }
-//d := NewDelegateStreamNamer()
-//d.RegisterDelegate(f, agg)
-//s.repo.streamNameDelegate = d
-//ev := NewTestEventMessage(id)
-//agg.TrackChange(ev)
+func (s *ComDomRepoSuite) TestCanSetEventFactory(c *C) {
+	eventFactory := NewDelegateEventFactory()
 
-//err := s.repo.Save(agg)
+	s.repo.SetEventFactory(eventFactory)
 
-//c.Assert(err, IsNil)
-//c.Assert(s.store.stream, Equals, f(typeOf(agg), agg.AggregateID()))
-//}
-
-//func (s *ComDomRepoSuite) TestReturnsErrorOnSaveIfStreamNameDelegateNotRegistered(c *C) {
-//agg := NewStubAggregate(yooid())
-
-//err := s.repo.Save(agg)
-
-//c.Assert(err, DeepEquals,
-//fmt.Errorf("There is no stream name delegate for aggregate of type \"%s\"",
-//typeOf(agg)))
-//}
-
-//func (s *ComDomRepoSuite) TestReturnsErrorOnSaveIfStreamNameDelegateIsNil(c *C) {
-//s.repo.streamNameDelegate = nil
-
-//agg := NewSomeAggregate(yooid())
-//err := s.repo.Save(agg)
-
-//c.Assert(err, NotNil)
-//c.Assert(err, DeepEquals, fmt.Errorf("The common domain repository has no stream name delagate."))
-//}
-
-//func (s *ComDomRepoSuite) TestReturnsErrorOnLoadIfStreamNameDelegateNotRegisteredForAggregate(c *C) {
-
-//id := yooid()
-//agg := NewSomeAggregate(id)
-
-//s.repo.streamNameDelegate = NewDelegateStreamNamer()
-
-//ev := NewTestEventMessage(id)
-//s.store.Save(agg.AggregateID().String(), []EventMessage{ev}, nil, nil)
-//_, err := s.repo.Load(typeOf(agg), agg.AggregateID())
-//c.Assert(err, NotNil)
-//c.Assert(err, DeepEquals,
-//fmt.Errorf("There is no stream name delegate for aggregate of type \"%s\"",
-//typeOf(agg)))
-//}
-
-//func (s *ComDomRepoSuite) TestReturnsErrorOnLoadIfStreamNameDelegateIsNil(c *C) {
-//s.repo.streamNameDelegate = nil
-
-//_, err := s.repo.Load("", yooid())
-
-//c.Assert(err, NotNil)
-//c.Assert(err, DeepEquals, fmt.Errorf("The common domain repository has no stream name delegate."))
-//}
-
-//func (s *ComDomRepoSuite) TestStreamNameIsBuiltByDelegateOnLoad(c *C) {
-//id := yooid()
-//agg := NewSomeAggregate(id)
-//ev := NewTestEventMessage(id)
-//f := func(t string, id uuid.UUID) string { return "xyz-" + id.String() }
-//d := NewDelegateStreamNamer()
-//d.RegisterDelegate(f, agg)
-//s.repo.streamNameDelegate = d
-//s.store.Save(f(typeOf(agg), agg.AggregateID()), []EventMessage{ev}, nil, nil)
-
-//_, err := s.repo.Load(typeOf(agg), agg.AggregateID())
-
-//c.Assert(err, IsNil)
-//c.Assert(s.store.loaded, Equals, f(typeOf(agg), agg.AggregateID()))
-//}
-
-//func (s *ComDomRepoSuite) TestCanSetEventFactory(c *C) {
-//eventFactory := NewDelegateEventFactory()
-//s.repo.SetEventFactory(eventFactory)
-//c.Assert(s.repo.eventFactory, Equals, eventFactory)
-//}
+	c.Assert(s.repo.eventFactory, Equals, eventFactory)
+}
 
 //////////////////////////////////////////////////////////////////////////////
 // Fakes
@@ -266,7 +277,7 @@ func NewStubAggregate(id uuid.UUID) *StubAggregate {
 
 type StubAggregate struct {
 	*AggregateBase
-	event EventMessage
+	events []EventMessage
 }
 
 func (t *StubAggregate) AggregateType() string {
@@ -278,5 +289,5 @@ func (t *StubAggregate) Handle(command CommandMessage) error {
 }
 
 func (t *StubAggregate) Apply(event EventMessage) {
-	t.event = event
+	t.events = append(t.events, event)
 }

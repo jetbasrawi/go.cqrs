@@ -32,13 +32,13 @@ type DomainRepository interface {
 //}
 
 type CommonDomainRepository struct {
-	eventStore         goes.GetEventStoreRepositoryClient
+	eventStore         GetEventStoreRepositoryClient
 	streamNameDelegate StreamNamer
 	aggregateFactory   AggregateFactory
 	eventFactory       EventFactory
 }
 
-func NewCommonDomainRepository(eventStore goes.GetEventStoreRepositoryClient) (*CommonDomainRepository, error) {
+func NewCommonDomainRepository(eventStore GetEventStoreRepositoryClient) (*CommonDomainRepository, error) {
 	if eventStore == nil {
 		return nil, fmt.Errorf("Nil Eventstore injected into repository.")
 	}

@@ -6,14 +6,14 @@ import (
 	"github.com/jetbasrawi/goes"
 )
 
-//type GetEventStoreRepositoryClient interface {
-////ReadStreamForwardAsync(string, *goes.StreamVersion, *goes.Take) <-chan struct {
-///[>goes.EventResponse
-///[>goes.Response
-////error
-////}
-//AppendToStream(string, *goes.StreamVersion, ...*goes.Event) (*goes.Response, error)
-//}
+type GetEventStoreRepositoryClient interface {
+	ReadStreamForwardAsync(string, *goes.StreamVersion, *goes.Take) <-chan struct {
+		goes.EventResponse
+		goes.Response
+		error
+	}
+	AppendToStream(string, *goes.StreamVersion, ...*goes.Event) (*goes.Response, error)
+}
 
 type FakeAsyncReader struct {
 	eventResponses []*goes.EventResponse

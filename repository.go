@@ -1,7 +1,10 @@
 package ycq
 
 import (
+	//"encoding/json"
 	"fmt"
+
+	"github.com/jetbasrawi/goes"
 	"github.com/jetbasrawi/yoono-uuid"
 )
 
@@ -11,13 +14,31 @@ type DomainRepository interface {
 	Save(AggregateRoot) error
 }
 
+//type GESRepositoryClient struct {
+//client *goes.Client
+//}
+
+//func (c *GESRepositoryClient) ReadStreamForwardAsync(stream string, version *goes.StreamVersion, take *goes.Take) <-chan struct {
+//*goes.EventResponse
+//*goes.Response
+//error
+//} {
+//ch := c.client.ReadStreamForwardAsync(stream, version, take)
+//return ch
+//}
+
+//func (c GESRepositoryClient) AppendToStream(stream string, version *goes.StreamVersion, events ...*goes.Event) (*goes.Response, error) {
+//return c.client.AppendToStream(stream, version, events)
+//}
+
 type CommonDomainRepository struct {
-	eventStore         EventStore
+	eventStore         goes.GetEventStoreRepositoryClient
 	streamNameDelegate StreamNamer
 	aggregateFactory   AggregateFactory
+	eventFactory       EventFactory
 }
 
-func NewCommonDomainRepository(eventStore EventStore) (*CommonDomainRepository, error) {
+func NewCommonDomainRepository(eventStore goes.GetEventStoreRepositoryClient) (*CommonDomainRepository, error) {
 	if eventStore == nil {
 		return nil, fmt.Errorf("Nil Eventstore injected into repository.")
 	}
@@ -27,9 +48,16 @@ func NewCommonDomainRepository(eventStore EventStore) (*CommonDomainRepository, 
 	return d, nil
 }
 
-func (r *CommonDomainRepository) RegisterAggregateFactory(factory AggregateFactory) error {
+func (r *CommonDomainRepository) SetAggregateFactory(factory AggregateFactory) {
 	r.aggregateFactory = factory
-	return nil
+}
+
+func (r *CommonDomainRepository) SetEventFactory(factory EventFactory) {
+	r.eventFactory = factory
+}
+
+func (r *CommonDomainRepository) SetStreamNameDelegate(delegate StreamNamer) {
+	r.streamNameDelegate = delegate
 }
 
 func (r *CommonDomainRepository) Load(aggregateType string, id uuid.UUID) (AggregateRoot, error) {
@@ -47,23 +75,41 @@ func (r *CommonDomainRepository) Load(aggregateType string, id uuid.UUID) (Aggre
 		return nil, fmt.Errorf("The repository has no aggregate factory registered for aggregate type: %s", aggregateType)
 	}
 
-	stream, err := r.streamNameDelegate.GetStreamName(aggregateType, id)
+	_, err := r.streamNameDelegate.GetStreamName(aggregateType, id)
 	if err != nil {
 		return nil, err
 	}
 
-	events, err := r.eventStore.Load(stream)
-	if err == ErrNoEventsFound {
-		err = nil
-	}
-	if err != nil {
-		return nil, err
-	}
+	//eventsChannel := r.eventStore.ReadStreamForwardAsync(stream, nil, nil)
 
-	for _, event := range events {
-		aggregate.Apply(event)
-		aggregate.IncrementVersion()
-	}
+	//for {
+	//select {
+	//case ev, open := <-eventsChannel:
+	//if !open {
+	//break
+	//}
+
+	//if ev.error != nil {
+	////TODO
+	//}
+
+	//event := r.eventFactory.GetEvent(ev.EventResponse.Event.EventType)
+	//if event == nil {
+	//return nil, fmt.Errorf("The event type %s is not registered with the eventstore.", ev.EventResponse.Event.EventType)
+	//}
+
+	//if data, ok := ev.EventResponse.Event.Data.(*json.RawMessage); ok {
+	//if err := json.Unmarshal(*data, event); err != nil {
+	//return nil, err
+	//}
+	//}
+
+	//em := NewEventMessage(id, event)
+	//aggregate.Apply(em)
+	//aggregate.IncrementVersion()
+
+	//}
+	//}
 
 	return aggregate, nil
 }
@@ -85,9 +131,16 @@ func (r *CommonDomainRepository) Save(aggregate AggregateRoot) error {
 	}
 
 	if len(resultEvents) > 0 {
-		err := r.eventStore.Save(streamName, resultEvents, &expectedVersion, nil)
+
+		evs := make([]*goes.Event, len(resultEvents))
+
+		for k, v := range resultEvents {
+			evs[k] = goes.ToEventData("", v.EventType(), v.Event(), v.GetHeaders())
+		}
+
+		resp, err := r.eventStore.AppendToStream(streamName, &goes.StreamVersion{expectedVersion}, evs...)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s", resp.StatusMessage)
 		}
 	}
 

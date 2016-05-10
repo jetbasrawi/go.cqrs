@@ -13,10 +13,9 @@ type EventMessage interface {
 }
 
 type EventEnvelope struct {
-	id        uuid.UUID
-	aggregate AggregateRoot
-	event     interface{}
-	headers   map[string]interface{}
+	id      uuid.UUID
+	event   interface{}
+	headers map[string]interface{}
 }
 
 func NewEventMessage(aggregateID uuid.UUID, event interface{}) *EventEnvelope {

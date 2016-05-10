@@ -92,7 +92,7 @@ func (t *TestDispatcherAggregate) Handle(command CommandMessage) error {
 
 	switch cmd := command.Command().(type) {
 	case *SomeCommand:
-		t.StoreEvent(NewEventMessage(command.AggregateID(), &SomeEvent{cmd.Item, cmd.Count}))
+		t.TrackChange(NewEventMessage(command.AggregateID(), &SomeEvent{cmd.Item, cmd.Count}))
 		return nil
 	case *ErrorCommand:
 		return fmt.Errorf(cmd.Message)

@@ -28,31 +28,31 @@ func (s *AggregateBaseSuite) TestIncrementVersion(c *C) {
 	c.Assert(agg.Version(), Equals, 1)
 }
 
-func (s *AggregateBaseSuite) TestStoreOneEvent(c *C) {
+func (s *AggregateBaseSuite) TestTrackOneChange(c *C) {
 	ev := NewTestEventMessage(yooid())
 	agg := NewSomeAggregate(ev.AggregateID())
 
-	agg.StoreEvent(ev)
+	agg.TrackChange(ev)
 
 	c.Assert(agg.GetChanges(), DeepEquals, []EventMessage{ev})
 }
 
-func (s *AggregateBaseSuite) TestStoreMultipleEvents(c *C) {
+func (s *AggregateBaseSuite) TestTrackMultipleChanges(c *C) {
 	agg := NewAggregateBase(yooid())
 	ev1 := NewTestEventMessage(agg.AggregateID())
 	ev2 := NewTestEventMessage(agg.AggregateID())
 
-	agg.StoreEvent(ev1)
-	agg.StoreEvent(ev2)
+	agg.TrackChange(ev1)
+	agg.TrackChange(ev2)
 
 	c.Assert(agg.GetChanges(), DeepEquals, []EventMessage{ev1, ev2})
 }
 
-func (s *AggregateBaseSuite) TestClearUncommittedEvents(c *C) {
+func (s *AggregateBaseSuite) TestClearChanges(c *C) {
 	agg := NewAggregateBase(yooid())
 	ev := NewTestEventMessage(agg.AggregateID())
 
-	agg.StoreEvent(ev)
+	agg.TrackChange(ev)
 
 	c.Assert(agg.GetChanges(), DeepEquals, []EventMessage{ev})
 	agg.ClearChanges()
@@ -80,7 +80,7 @@ func (t *SomeAggregate) Handle(command CommandMessage) error {
 
 type SomeOtherAggregate struct {
 	*AggregateBase
-	events []EventMessage
+	changes []EventMessage
 }
 
 func NewSomeOtherAggregate(id uuid.UUID) AggregateRoot {
@@ -90,7 +90,7 @@ func NewSomeOtherAggregate(id uuid.UUID) AggregateRoot {
 }
 
 func (t *SomeOtherAggregate) Apply(event EventMessage) {
-	t.events = append(t.events, event)
+	t.changes = append(t.changes, event)
 }
 
 func (t *SomeOtherAggregate) Handle(command CommandMessage) error {

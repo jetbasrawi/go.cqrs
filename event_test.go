@@ -12,24 +12,6 @@ var _ = Suite(&EventSuite{})
 type EventSuite struct {
 }
 
-//type TestEvent struct {
-//TestID  uuid.UUID
-//Content string
-//}
-
-//func (t *TestEvent) AggregateID() uuid.UUID { return t.TestID }
-//func (t *TestEvent) AggregateType() string  { return "Test" }
-//func (t *TestEvent) EventType() string      { return "TestEvent" }
-
-//type TestEventOther struct {
-//TestID  uuid.UUID
-//Content string
-//}
-
-//func (t *TestEventOther) AggregateID() uuid.UUID { return t.TestID }
-//func (t *TestEventOther) AggregateType() string  { return "Test" }
-//func (t *TestEventOther) EventType() string      { return "TestEventOther" }
-
 type SomeEvent struct {
 	Item  string
 	Count int
@@ -61,6 +43,7 @@ func (s *EventSuite) TestShouldGetTypeOfEvent(c *C) {
 	c.Assert(em.EventType(), Equals, "SomeEvent")
 }
 
+//TODO: Do i need this still?
 //func (s *EventSuite) TestShouldGetTypeOfAggregate(c *C) {
 //em := &EventMessage{aggregate: &SomeAggregate{}}
 //c.Assert(em.AggregateType(), Equals, "SomeAggregate")

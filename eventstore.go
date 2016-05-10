@@ -26,17 +26,3 @@ type EventStore interface {
 	// Load loads all events for the aggregate identified by the stream name from the store.
 	Load(string) ([]EventMessage, error)
 }
-
-// AggregateRecord is a stored record of an aggregate in form of its events.
-//type AggregateRecord interface {
-//AggregateID() uuid.UUID
-//Version() int
-//EventRecords() []EventRecord
-//}
-
-//// EventRecord is a single event record with timestamp
-//type EventRecord interface {
-//Type() string
-//Version() int
-//Events() []EventMessage
-//}

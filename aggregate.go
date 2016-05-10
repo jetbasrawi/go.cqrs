@@ -8,7 +8,7 @@ type AggregateRoot interface {
 	IncrementVersion()
 	Handle(CommandMessage) error
 	Apply(events EventMessage)
-	StoreEvent(EventMessage)
+	TrackChange(EventMessage)
 	GetChanges() []EventMessage
 	ClearChanges()
 }
@@ -38,7 +38,7 @@ func (a *AggregateBase) IncrementVersion() {
 	a.version++
 }
 
-func (a *AggregateBase) StoreEvent(event EventMessage) {
+func (a *AggregateBase) TrackChange(event EventMessage) {
 	a.changes = append(a.changes, event)
 }
 

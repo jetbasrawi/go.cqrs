@@ -1,107 +1,113 @@
 package ycq
 
-import (
-	"encoding/json"
-	"fmt"
-	"github.com/jetbasrawi/goes"
-	"github.com/jetbasrawi/yoono-uuid"
-	"net/http"
-)
+//import (
+//"encoding/json"
+//"fmt"
+//"net/http"
 
-type GetEventStore struct {
-	eventBus     EventBus
-	client       *goes.Client
-	eventFactory EventFactory
-}
+//"github.com/davecgh/go-spew/spew"
+//"github.com/jetbasrawi/goes"
+//"github.com/jetbasrawi/yoono-uuid"
+//)
 
-func NewGetEventStore(eventBus EventBus, eventstoreURL string) (*GetEventStore, error) {
-	goesClient, err := goes.NewClient(nil, eventstoreURL)
-	if err != nil {
-		return nil, err
-	}
+//type GetEventStore struct {
+//eventBus     EventBus
+//eventFactory EventFactory
+//appender     goes.StreamAppender
+//builder      goes.EventBuilder
+//reader       goes.StreamReader
+//}
 
-	s := &GetEventStore{
-		eventBus: eventBus,
-		client:   goesClient,
-	}
+//func NewGetEventStore(
+//eventBus EventBus,
+//appender goes.StreamAppender,
+//builder goes.EventBuilder,
+//reader goes.StreamReader) *GetEventStore {
 
-	return s, nil
-}
+//s := &GetEventStore{
+//eventBus: eventBus,
+//appender: appender,
+//builder:  builder,
+//reader:   reader,
+//}
 
-func (s *GetEventStore) SetEventFactory(eventFactory EventFactory) {
-	s.eventFactory = eventFactory
-}
+//return s
+//}
 
-// Load loads all events for the aggregate id from the memory store.
-// Returns ErrNoEventsFound if no events can be found.
-func (s *GetEventStore) Load(stream string) ([]EventMessage, error) {
+//func (s *GetEventStore) SetEventFactory(eventFactory EventFactory) {
+//s.eventFactory = eventFactory
+//}
 
-	events, _, err := s.client.ReadFeedForward(stream, nil, nil)
-	if err != nil {
-		if e, ok := err.(*goes.ErrorResponse); ok {
-			if e.StatusCode == http.StatusNotFound {
-				return nil, ErrNoEventsFound
-			}
-		} else {
-			return nil, err
-		}
-	}
+//// Load loads all events for the aggregate id from the memory store.
+//// Returns ErrNoEventsFound if no events can be found.
+//func (s *GetEventStore) Load(stream string) ([]EventMessage, error) {
 
-	if len(events) <= 0 {
-		return nil, ErrNoEventsFound
-	}
+//events, _, err := s.reader.ReadStreamForward(stream, nil, nil)
+//if err != nil {
+//if e, ok := err.(*goes.ErrorResponse); ok {
+//if e.StatusCode == http.StatusNotFound {
+//return nil, ErrNoEventsFound
+//}
+//} else {
+//return nil, err
+//}
+//}
 
-	ret := make([]EventMessage, len(events))
-	for i, r := range events {
-		ev := s.eventFactory.GetEvent(r.Event.EventType)
-		if ev == nil {
-			return nil, fmt.Errorf("The event type %s is not registered with the eventstore.", r.Event.EventType)
-		}
+//if len(events) <= 0 {
+//return nil, ErrNoEventsFound
+//}
 
-		if data, ok := r.Event.Data.(*json.RawMessage); ok {
-			if err := json.Unmarshal(*data, ev); err != nil {
-				return nil, err
-			}
-		}
+//ret := make([]EventMessage, len(events))
+//for i, r := range events {
+//spew.Dump(r)
+//ev := s.eventFactory.GetEvent(r.Event.EventType)
+//if ev == nil {
+//return nil, fmt.Errorf("The event type %s is not registered with the eventstore.", r.Event.EventType)
+//}
 
-		id, err := uuid.FromString(r.ID)
-		if err != nil {
-			return nil, err
-		}
+//if data, ok := r.Event.Data.(*json.RawMessage); ok {
+//if err := json.Unmarshal(*data, ev); err != nil {
+//return nil, err
+//}
+//}
 
-		ret[i] = NewEventMessage(id, ev)
-	}
+//id, err := uuid.FromString(r.Event.EventID)
+//if err != nil {
+//return nil, err
+//}
 
-	return ret, nil
-}
+//ret[i] = NewEventMessage(id, ev)
+//}
 
-func (s *GetEventStore) Save(stream string, events []EventMessage, expectedVersion *int, headers map[string]interface{}) error {
+//return ret, nil
+//}
 
-	if len(events) == 0 {
-		return ErrNoEventsToAppend
-	}
+//func (s *GetEventStore) Save(stream string, events []EventMessage, expectedVersion *int, headers map[string]interface{}) error {
 
-	streamName := fmt.Sprintf("%s", events[0].AggregateID())
-	esEvents := make([]*goes.Event, len(events))
+//if len(events) == 0 {
+//return ErrNoEventsToAppend
+//}
 
-	for k, v := range events {
-		esEvents[k] = s.client.ToEventData("", v.EventType(), v, headers)
-	}
+//esEvents := make([]*goes.Event, len(events))
 
-	var version *goes.StreamVersion
-	if expectedVersion != nil {
-		version = &goes.StreamVersion{Number: *expectedVersion}
-	}
-	_, err := s.client.AppendToStream(streamName, version, esEvents...)
-	if err != nil {
-		return err //TODO: Much improvement
-	}
+//for k, v := range events {
+//esEvents[k] = s.builder.ToEventData("", v.EventType(), v, headers)
+//}
 
-	if s.eventBus != nil {
-		for _, v := range events {
-			s.eventBus.PublishEvent(v)
-		}
-	}
+//var version *goes.StreamVersion
+//if expectedVersion != nil {
+//version = &goes.StreamVersion{Number: *expectedVersion}
+//}
+//_, err := s.appender.AppendToStream(stream, version, esEvents...)
+//if err != nil {
+//return err //TODO: Much improvement
+//}
 
-	return nil
-}
+//if s.eventBus != nil {
+//for _, v := range events {
+//s.eventBus.PublishEvent(v)
+//}
+//}
+
+//return nil
+//}

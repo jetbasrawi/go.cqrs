@@ -12,36 +12,36 @@ type EventMessage interface {
 	EventType() string
 }
 
-type EventEnvelope struct {
+type EventDescriptor struct {
 	id      uuid.UUID
 	event   interface{}
 	headers map[string]interface{}
 }
 
-func NewEventMessage(aggregateID uuid.UUID, event interface{}) *EventEnvelope {
-	return &EventEnvelope{
+func NewEventMessage(aggregateID uuid.UUID, event interface{}) *EventDescriptor {
+	return &EventDescriptor{
 		id:      aggregateID,
 		event:   event,
 		headers: make(map[string]interface{}),
 	}
 }
 
-func (c *EventEnvelope) EventType() string {
+func (c *EventDescriptor) EventType() string {
 	return typeOf(c.event)
 }
 
-func (c *EventEnvelope) AggregateID() uuid.UUID {
+func (c *EventDescriptor) AggregateID() uuid.UUID {
 	return c.id
 }
 
-func (c *EventEnvelope) GetHeaders() map[string]interface{} {
+func (c *EventDescriptor) GetHeaders() map[string]interface{} {
 	return c.headers
 }
 
-func (c *EventEnvelope) Event() interface{} {
+func (c *EventDescriptor) Event() interface{} {
 	return c.event
 }
 
-func (c *EventEnvelope) SetHeader(key string, value interface{}) {
+func (c *EventDescriptor) SetHeader(key string, value interface{}) {
 	c.headers[key] = value
 }

@@ -3,10 +3,27 @@ package ycq
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"github.com/jetbasrawi/goes"
 	"github.com/jetbasrawi/yoono-uuid"
 )
+
+type GetEventStoreRepositoryClient interface {
+	ReadStreamForwardAsync(string, *goes.StreamVersion, *goes.Take) <-chan *goes.AsyncResponse
+	AppendToStream(string, *goes.StreamVersion, ...*goes.Event) (*goes.Response, error)
+}
+
+type AggregateNotFoundError struct {
+	AggregateID   uuid.UUID
+	AggregateType string
+}
+
+func (e *AggregateNotFoundError) Error() string {
+	return fmt.Sprintf("Could not find any aggregate of type %s with id %s",
+		e.AggregateType,
+		e.AggregateID.String())
+}
 
 type DomainRepository interface {
 	Load(string, uuid.UUID) (AggregateRoot, error)
@@ -77,7 +94,11 @@ func (r *CommonDomainRepository) Load(aggregateType string, id uuid.UUID) (Aggre
 			}
 
 			if ev.Err != nil {
-				//TODO
+				if ev.Resp.StatusCode == http.StatusNotFound {
+					return nil, &AggregateNotFoundError{AggregateType: aggregateType, AggregateID: id}
+				}
+
+				return nil, ev.Err
 			}
 
 			event := r.eventFactory.GetEvent(ev.EventResp.Event.EventType)
@@ -96,7 +117,6 @@ func (r *CommonDomainRepository) Load(aggregateType string, id uuid.UUID) (Aggre
 			em := NewEventMessage(id, event)
 			aggregate.Apply(em)
 			aggregate.IncrementVersion()
-
 		}
 	}
 }

@@ -21,7 +21,7 @@ type SomeOtherEvent struct {
 	OrderID uuid.UUID
 }
 
-func NewTestEventMessage(id uuid.UUID) *EventEnvelope {
+func NewTestEventMessage(id uuid.UUID) *EventDescriptor {
 	ev := &SomeEvent{Item: yooid().String(), Count: rand.Intn(100)}
 	return NewEventMessage(id, ev)
 }
@@ -39,7 +39,7 @@ func (s *EventSuite) TestNewEventMessage(c *C) {
 
 func (s *EventSuite) TestShouldGetTypeOfEvent(c *C) {
 	se := &SomeEvent{"Some String", 42}
-	em := &EventEnvelope{event: se}
+	em := &EventDescriptor{event: se}
 	c.Assert(em.EventType(), Equals, "SomeEvent")
 }
 

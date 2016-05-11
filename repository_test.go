@@ -2,6 +2,9 @@ package ycq
 
 import (
 	"fmt"
+	"net/http"
+
+	"github.com/davecgh/go-spew/spew"
 	"github.com/jetbasrawi/goes"
 	"github.com/jetbasrawi/yoono-uuid"
 	. "gopkg.in/check.v1"
@@ -265,6 +268,75 @@ func (s *ComDomRepoSuite) TestCanSetEventFactory(c *C) {
 	c.Assert(s.repo.eventFactory, Equals, eventFactory)
 }
 
+func (s *ComDomRepoSuite) TestAsyncFakeReadForwardAll(c *C) {
+
+	stream := "some-stream"
+	es := goes.CreateTestEvents(10, stream, "some-server", "MyEventType")
+	ers := goes.CreateTestEventResponses(es, nil)
+	fake := NewFakeAsyncClient()
+	fake.eventResponses = ers
+
+	eventsChannel := fake.ReadStreamForwardAsync(stream, nil, nil)
+	count := 0
+	for {
+		select {
+		case ev, open := <-eventsChannel:
+			if !open {
+				c.Assert(count, Equals, len(es))
+				c.Assert(fake.stream, Equals, stream)
+				return
+			}
+
+			c.Assert(ev.Err, IsNil)
+			c.Assert(ev.EventResp.Event, Equals, es[count])
+			count++
+		}
+	}
+}
+
+func (s *ComDomRepoSuite) TestAppendToStream(c *C) {
+	stream := "some-stream"
+	es := goes.CreateTestEvents(10, stream, "some-server", "MyEventType")
+	fake := NewFakeAsyncClient()
+
+	resp, err := fake.AppendToStream(stream, nil, es...)
+
+	c.Assert(err, IsNil)
+	c.Assert(resp.StatusCode, Equals, http.StatusCreated)
+	c.Assert(resp.StatusMessage, Equals, "201 Created")
+	c.Assert(fake.appended, DeepEquals, es)
+	c.Assert(fake.stream, Equals, stream)
+}
+
+func (s *ComDomRepoSuite) TestAggregateNotFoundError(c *C) {
+	errorClient := &ErrorClient{}
+	errorClient.resp = &goes.Response{StatusCode: http.StatusNotFound, StatusMessage: "404 Not Found"}
+	errorClient.err = &goes.ErrorResponse{}
+	s.repo.eventStore = errorClient
+
+	id := yooid()
+	agg, err := s.repo.Load(typeOf(&SomeAggregate{}), id)
+	c.Assert(agg, IsNil)
+	c.Assert(err, NotNil)
+	c.Assert(err, FitsTypeOf, &AggregateNotFoundError{AggregateID: id, AggregateType: typeOf(&SomeAggregate{})})
+}
+
+func (s *ComDomRepoSuite) TestForwardEventStoreError(c *C) {
+	errorClient := &ErrorClient{}
+	errorClient.resp = &goes.Response{StatusCode: http.StatusUnauthorized, StatusMessage: "401 Unauthorized"}
+	errorClient.err = fmt.Errorf("Some Error")
+	s.repo.eventStore = errorClient
+
+	id := yooid()
+	agg, err := s.repo.Load(typeOf(&SomeAggregate{}), id)
+
+	spew.Dump(err)
+
+	c.Assert(agg, IsNil)
+	c.Assert(err, NotNil)
+	c.Assert(err, Equals, errorClient.err)
+}
+
 //////////////////////////////////////////////////////////////////////////////
 // Fakes
 
@@ -290,4 +362,65 @@ func (t *StubAggregate) Handle(command CommandMessage) error {
 
 func (t *StubAggregate) Apply(event EventMessage) {
 	t.events = append(t.events, event)
+}
+
+type FakeAsyncReader struct {
+	eventResponses []*goes.EventResponse
+	stream         string
+	appended       []*goes.Event
+}
+
+func NewFakeAsyncClient() *FakeAsyncReader {
+	fake := &FakeAsyncReader{}
+	return fake
+}
+
+func (c *FakeAsyncReader) ReadStreamForwardAsync(stream string, version *goes.StreamVersion, take *goes.Take) <-chan *goes.AsyncResponse {
+
+	c.stream = stream
+	eventsChannel := make(chan *goes.AsyncResponse)
+
+	go func() {
+		for _, v := range c.eventResponses {
+			eventsChannel <- &goes.AsyncResponse{v, nil, nil}
+		}
+		close(eventsChannel)
+		return
+	}()
+
+	return eventsChannel
+
+}
+
+func (c *FakeAsyncReader) AppendToStream(stream string, expectedVersion *goes.StreamVersion, events ...*goes.Event) (*goes.Response, error) {
+	c.appended = events
+	c.stream = stream
+	r := &goes.Response{
+		StatusCode:    http.StatusCreated,
+		StatusMessage: "201 Created",
+	}
+	return r, nil
+}
+
+type ErrorClient struct {
+	err  error
+	resp *goes.Response
+}
+
+func (c *ErrorClient) ReadStreamForwardAsync(stream string, version *goes.StreamVersion, take *goes.Take) <-chan *goes.AsyncResponse {
+
+	eventsChannel := make(chan *goes.AsyncResponse)
+
+	go func() {
+		eventsChannel <- &goes.AsyncResponse{nil, c.resp, c.err}
+		close(eventsChannel)
+		return
+	}()
+
+	return eventsChannel
+
+}
+
+func (c *ErrorClient) AppendToStream(stream string, expectedVersion *goes.StreamVersion, events ...*goes.Event) (*goes.Response, error) {
+	return c.resp, c.err
 }

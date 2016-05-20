@@ -6,8 +6,7 @@ type AggregateRoot interface {
 	AggregateID() uuid.UUID
 	Version() int
 	IncrementVersion()
-	Handle(CommandMessage) error
-	Apply(events EventMessage)
+	Apply(events EventMessage, isNew bool)
 	TrackChange(EventMessage)
 	GetChanges() []EventMessage
 	ClearChanges()

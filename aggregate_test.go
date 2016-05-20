@@ -70,7 +70,7 @@ func NewSomeAggregate(id uuid.UUID) AggregateRoot {
 	}
 }
 
-func (t *SomeAggregate) Apply(event EventMessage) {
+func (t *SomeAggregate) Apply(event EventMessage, isNew bool) {
 	t.events = append(t.events, event)
 }
 
@@ -89,7 +89,8 @@ func NewSomeOtherAggregate(id uuid.UUID) AggregateRoot {
 	}
 }
 
-func (t *SomeOtherAggregate) Apply(event EventMessage) {
+//TODO: No tests for isNew
+func (t *SomeOtherAggregate) Apply(event EventMessage, isNew bool) {
 	t.changes = append(t.changes, event)
 }
 

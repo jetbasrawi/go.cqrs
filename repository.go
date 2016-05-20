@@ -25,6 +25,16 @@ func (e *AggregateNotFoundError) Error() string {
 		e.AggregateID.String())
 }
 
+type ConcurrencyError struct {
+	Aggregate       AggregateRoot
+	ExpectedVersion int
+	StreamName      string
+}
+
+func (e *ConcurrencyError) Error() string {
+	return fmt.Sprintf("ConcurrencyError: AggregateID: %s ExpectedVersion: %d StreamName: %s", e.Aggregate.AggregateID().String(), e.ExpectedVersion, e.StreamName)
+}
+
 type DomainRepository interface {
 	Load(string, uuid.UUID) (AggregateRoot, error)
 
@@ -33,17 +43,24 @@ type DomainRepository interface {
 
 type CommonDomainRepository struct {
 	eventStore         GetEventStoreRepositoryClient
+	eventBus           EventBus
 	streamNameDelegate StreamNamer
 	aggregateFactory   AggregateFactory
 	eventFactory       EventFactory
 }
 
-func NewCommonDomainRepository(eventStore GetEventStoreRepositoryClient) (*CommonDomainRepository, error) {
+func NewCommonDomainRepository(eventStore GetEventStoreRepositoryClient, eventBus EventBus) (*CommonDomainRepository, error) {
 	if eventStore == nil {
 		return nil, fmt.Errorf("Nil Eventstore injected into repository.")
 	}
+
+	if eventBus == nil {
+		return nil, fmt.Errorf("Nil EventBus injected into repository.")
+	}
+
 	d := &CommonDomainRepository{
 		eventStore: eventStore,
+		eventBus:   eventBus,
 	}
 	return d, nil
 }
@@ -115,7 +132,7 @@ func (r *CommonDomainRepository) Load(aggregateType string, id uuid.UUID) (Aggre
 				return nil, err
 			}
 			em := NewEventMessage(id, event)
-			aggregate.Apply(em)
+			aggregate.Apply(em, false)
 			aggregate.IncrementVersion()
 		}
 	}
@@ -142,16 +159,27 @@ func (r *CommonDomainRepository) Save(aggregate AggregateRoot) error {
 		evs := make([]*goes.Event, len(resultEvents))
 
 		for k, v := range resultEvents {
+			//TODO: There is no test for this code
+			v.SetHeader("AggregateID", aggregate.AggregateID().String())
 			evs[k] = goes.ToEventData("", v.EventType(), v.Event(), v.GetHeaders())
 		}
 
 		resp, err := r.eventStore.AppendToStream(streamName, &goes.StreamVersion{expectedVersion}, evs...)
 		if err != nil {
-			return fmt.Errorf("%s", resp.StatusMessage)
+			if resp.StatusCode == http.StatusBadRequest {
+				return &ConcurrencyError{Aggregate: aggregate, ExpectedVersion: expectedVersion, StreamName: streamName}
+			}
+
+			return err
 		}
 	}
 
 	aggregate.ClearChanges()
+
+	//TODO: Write tests to verify this
+	for _, v := range resultEvents {
+		r.eventBus.PublishEvent(v)
+	}
 
 	return nil
 }

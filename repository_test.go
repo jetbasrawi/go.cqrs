@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/jetbasrawi/goes"
 	"github.com/jetbasrawi/yoono-uuid"
 	. "gopkg.in/check.v1"
@@ -33,7 +32,9 @@ func (s *ComDomRepoSuite) SetUpTest(c *C) {
 	store.stream = stream
 	s.store = store
 
-	s.repo, _ = NewCommonDomainRepository(s.store)
+	eventBus := NewInternalEventBus()
+
+	s.repo, _ = NewCommonDomainRepository(s.store, eventBus)
 
 	aggregateFactory := NewDelegateAggregateFactory()
 	aggregateFactory.RegisterDelegate(&SomeAggregate{},
@@ -57,20 +58,31 @@ func (s *ComDomRepoSuite) SetUpTest(c *C) {
 
 func (s *ComDomRepoSuite) TestCanConstructNewRepository(c *C) {
 	store, _ := goes.NewClient(nil, "")
+	eventBus := NewInternalEventBus()
 
-	repo, err := NewCommonDomainRepository(store)
+	repo, err := NewCommonDomainRepository(store, eventBus)
 
 	c.Assert(repo, NotNil)
 	c.Assert(err, IsNil)
 	c.Assert(repo.aggregateFactory, IsNil)
 	c.Assert(repo.streamNameDelegate, IsNil)
+	c.Assert(repo.eventBus, NotNil)
 }
 
 func (s *ComDomRepoSuite) TestCreatingNewRepositoryWithNilEventStoreReturnsAnError(c *C) {
-	repo, err := NewCommonDomainRepository(nil)
+	eventBus := NewInternalEventBus()
+	repo, err := NewCommonDomainRepository(nil, eventBus)
 
 	c.Assert(repo, IsNil)
 	c.Assert(err, DeepEquals, fmt.Errorf("Nil Eventstore injected into repository."))
+}
+
+func (s *ComDomRepoSuite) TestCreatingNewRepositoryWithNilEventBusReturnsAnError(c *C) {
+	store, _ := goes.NewClient(nil, "")
+	repo, err := NewCommonDomainRepository(store, nil)
+
+	c.Assert(repo, IsNil)
+	c.Assert(err, DeepEquals, fmt.Errorf("Nil EventBus injected into repository."))
 }
 
 func (s *ComDomRepoSuite) TestRepositoryCanLoadAnAggregate(c *C) {
@@ -330,10 +342,38 @@ func (s *ComDomRepoSuite) TestForwardEventStoreError(c *C) {
 	id := yooid()
 	agg, err := s.repo.Load(typeOf(&SomeAggregate{}), id)
 
-	spew.Dump(err)
-
 	c.Assert(agg, IsNil)
 	c.Assert(err, NotNil)
+	c.Assert(err, Equals, errorClient.err)
+}
+
+func (s *ComDomRepoSuite) TestSaveReturnsConncurrencyException(c *C) {
+	errorClient := &ErrorClient{}
+	errorClient.resp = &goes.Response{StatusCode: http.StatusBadRequest, StatusMessage: "400 Wrong expected EventNumber"}
+	errorClient.err = &goes.ErrorResponse{}
+	s.repo.eventStore = errorClient
+
+	id := yooid()
+	agg := NewSomeAggregate(id)
+	agg.TrackChange(NewEventMessage(yooid(), &SomeEvent{"Some data", 4}))
+
+	err := s.repo.Save(agg)
+
+	c.Assert(err, FitsTypeOf, &ConcurrencyError{Aggregate: agg, ExpectedVersion: 1})
+}
+
+func (s *ComDomRepoSuite) TestSaveForwardsUnhandledErrors(c *C) {
+	errorClient := &ErrorClient{}
+	errorClient.resp = &goes.Response{StatusCode: http.StatusUnauthorized, StatusMessage: "401 Unauthorized"}
+	errorClient.err = fmt.Errorf("Some Error")
+	s.repo.eventStore = errorClient
+
+	id := yooid()
+	agg := NewSomeAggregate(id)
+	agg.TrackChange(NewEventMessage(yooid(), &SomeEvent{"Some data", 4}))
+
+	err := s.repo.Save(agg)
+
 	c.Assert(err, Equals, errorClient.err)
 }
 
@@ -360,7 +400,7 @@ func (t *StubAggregate) Handle(command CommandMessage) error {
 	return nil
 }
 
-func (t *StubAggregate) Apply(event EventMessage) {
+func (t *StubAggregate) Apply(event EventMessage, isNew bool) {
 	t.events = append(t.events, event)
 }
 

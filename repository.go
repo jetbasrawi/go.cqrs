@@ -10,7 +10,7 @@ import (
 )
 
 type GetEventStoreRepositoryClient interface {
-	ReadStreamForwardAsync(string, *goes.StreamVersion, *goes.Take) <-chan *goes.AsyncResponse
+	ReadStreamForwardAsync(string, *goes.StreamVersion, *goes.Take, int) <-chan *goes.AsyncResponse
 	AppendToStream(string, *goes.StreamVersion, ...*goes.Event) (*goes.Response, error)
 }
 
@@ -101,7 +101,7 @@ func (r *CommonDomainRepository) Load(aggregateType string, id uuid.UUID) (Aggre
 		return nil, err
 	}
 
-	eventsChannel := r.eventStore.ReadStreamForwardAsync(stream, nil, nil)
+	eventsChannel := r.eventStore.ReadStreamForwardAsync(stream, nil, nil, 0)
 
 	for {
 		select {

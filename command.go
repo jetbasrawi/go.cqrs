@@ -4,44 +4,62 @@ import (
 	"github.com/jetbasrawi/yoono-uuid"
 )
 
+//CommandMessage is the interface that a command message must implement.
 type CommandMessage interface {
+
+	//AggregateID returns the ID of the Aggregate that the command relates to
 	AggregateID() uuid.UUID
+
+	//Headers returns the key value collection of headers for the command.
 	Headers() map[string]interface{}
+
+	//SetHeader sets the value of the header specified by the key
 	SetHeader(string, interface{})
+
+	//Command returns the actual command which is the payload of the command message.
 	Command() interface{}
+
+	//CommandType returns a string descriptor of the command name
 	CommandType() string
 }
 
-type CmdMessage struct {
+//CommandDescriptor is an implementation of the command message interface.
+type CommandDescriptor struct {
 	id      uuid.UUID
 	command interface{}
 	headers map[string]interface{}
 }
 
-func NewCommandMessage(aggregateID uuid.UUID, command interface{}) *CmdMessage {
-	return &CmdMessage{
+//NewCommandMessage returns a new command descriptor
+func NewCommandMessage(aggregateID uuid.UUID, command interface{}) *CommandDescriptor {
+	return &CommandDescriptor{
 		id:      aggregateID,
 		command: command,
 		headers: make(map[string]interface{}),
 	}
 }
 
-func (c *CmdMessage) CommandType() string {
+//CommandType returns the command type name as a string
+func (c *CommandDescriptor) CommandType() string {
 	return typeOf(c.command)
 }
 
-func (c *CmdMessage) AggregateID() uuid.UUID {
+//AggregateID returns the ID of the aggregate that the command relates to.
+func (c *CommandDescriptor) AggregateID() uuid.UUID {
 	return c.id
 }
 
-func (c *CmdMessage) Headers() map[string]interface{} {
+//Headers returns the collection of headers for the command.
+func (c *CommandDescriptor) Headers() map[string]interface{} {
 	return c.headers
 }
 
-func (c *CmdMessage) Command() interface{} {
-	return c.command
+//SetHeader sets the value of the header with the specified key
+func (c *CommandDescriptor) SetHeader(key string, value interface{}) {
+	c.headers[key] = value
 }
 
-func (c *CmdMessage) SetHeader(key string, value interface{}) {
-	c.headers[key] = value
+//Returns the actual command payload of the message.
+func (c *CommandDescriptor) Command() interface{} {
+	return c.command
 }

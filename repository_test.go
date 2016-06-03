@@ -288,7 +288,7 @@ func (s *ComDomRepoSuite) TestAsyncFakeReadForwardAll(c *C) {
 	fake := NewFakeAsyncClient()
 	fake.eventResponses = ers
 
-	eventsChannel := fake.ReadStreamForwardAsync(stream, nil, nil)
+	eventsChannel := fake.ReadStreamForwardAsync(stream, nil, nil, 0)
 	count := 0
 	for {
 		select {
@@ -415,7 +415,7 @@ func NewFakeAsyncClient() *FakeAsyncReader {
 	return fake
 }
 
-func (c *FakeAsyncReader) ReadStreamForwardAsync(stream string, version *goes.StreamVersion, take *goes.Take) <-chan *goes.AsyncResponse {
+func (c *FakeAsyncReader) ReadStreamForwardAsync(stream string, version *goes.StreamVersion, take *goes.Take, bufSize int) <-chan *goes.AsyncResponse {
 
 	c.stream = stream
 	eventsChannel := make(chan *goes.AsyncResponse)
@@ -447,7 +447,7 @@ type ErrorClient struct {
 	resp *goes.Response
 }
 
-func (c *ErrorClient) ReadStreamForwardAsync(stream string, version *goes.StreamVersion, take *goes.Take) <-chan *goes.AsyncResponse {
+func (c *ErrorClient) ReadStreamForwardAsync(stream string, version *goes.StreamVersion, take *goes.Take, bufSize int) <-chan *goes.AsyncResponse {
 
 	eventsChannel := make(chan *goes.AsyncResponse)
 

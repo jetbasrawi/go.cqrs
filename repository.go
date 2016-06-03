@@ -9,11 +9,14 @@ import (
 	"github.com/jetbasrawi/yoono-uuid"
 )
 
+//GetEventStoreRepositoryClient
+//TODO: Remove this as it is not generic enough. Replace with a generic eventStore interface
 type GetEventStoreRepositoryClient interface {
 	ReadStreamForwardAsync(string, *goes.StreamVersion, *goes.Take, int) <-chan *goes.AsyncResponse
 	AppendToStream(string, *goes.StreamVersion, ...*goes.Event) (*goes.Response, error)
 }
 
+//AggregateNotFoundError error returned when an aggregate was not found in the repository.
 type AggregateNotFoundError struct {
 	AggregateID   uuid.UUID
 	AggregateType string
@@ -25,6 +28,9 @@ func (e *AggregateNotFoundError) Error() string {
 		e.AggregateID.String())
 }
 
+//ConcurrencyError is returned when a concurrency error is raised by the event store
+//when events are persisted to a stream and the version of the stream does not match
+//the expected version.
 type ConcurrencyError struct {
 	Aggregate       AggregateRoot
 	ExpectedVersion int
@@ -35,12 +41,16 @@ func (e *ConcurrencyError) Error() string {
 	return fmt.Sprintf("ConcurrencyError: AggregateID: %s ExpectedVersion: %d StreamName: %s", e.Aggregate.AggregateID().String(), e.ExpectedVersion, e.StreamName)
 }
 
+//DomainRepository is the interface that all domain repositories should implement.
 type DomainRepository interface {
+	//Loads an aggregate of the given type and ID
 	Load(string, uuid.UUID) (AggregateRoot, error)
 
+	//Saves the aggregate.
 	Save(AggregateRoot) error
 }
 
+//CommonDomainRepository is a generic repository implementation
 type CommonDomainRepository struct {
 	eventStore         GetEventStoreRepositoryClient
 	eventBus           EventBus
@@ -49,6 +59,7 @@ type CommonDomainRepository struct {
 	eventFactory       EventFactory
 }
 
+//NewCommonDomainRepository constructs a new CommonDomainRepository
 func NewCommonDomainRepository(eventStore GetEventStoreRepositoryClient, eventBus EventBus) (*CommonDomainRepository, error) {
 	if eventStore == nil {
 		return nil, fmt.Errorf("Nil Eventstore injected into repository.")
@@ -65,18 +76,30 @@ func NewCommonDomainRepository(eventStore GetEventStoreRepositoryClient, eventBu
 	return d, nil
 }
 
+//SetAggregateFactory sets the aggregate factory that should be used to
+//instantate aggregate instances
+//
+//Only one AggregateFactory can be registered at any one time.
+//Any registration will overwrite the provious registration.
 func (r *CommonDomainRepository) SetAggregateFactory(factory AggregateFactory) {
 	r.aggregateFactory = factory
 }
 
+//SetEventFactory sets the event factory that should be used to instantiate event
+//instances.
+//
+//Only one event factory can be set at a time. Any subsequent registration will
+//overwrite the previous factory.
 func (r *CommonDomainRepository) SetEventFactory(factory EventFactory) {
 	r.eventFactory = factory
 }
 
+//SetStreamNameDelegate sets the stream name delegate
 func (r *CommonDomainRepository) SetStreamNameDelegate(delegate StreamNamer) {
 	r.streamNameDelegate = delegate
 }
 
+//Load loads the aggragate with the specified type and ID
 func (r *CommonDomainRepository) Load(aggregateType string, id uuid.UUID) (AggregateRoot, error) {
 
 	if r.aggregateFactory == nil {
@@ -138,7 +161,7 @@ func (r *CommonDomainRepository) Load(aggregateType string, id uuid.UUID) (Aggre
 	}
 }
 
-// Save  persists an aggregate
+//Save persists an aggregate
 func (r *CommonDomainRepository) Save(aggregate AggregateRoot) error {
 
 	if r.streamNameDelegate == nil {

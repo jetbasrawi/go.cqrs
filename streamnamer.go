@@ -5,20 +5,26 @@ import (
 	"github.com/jetbasrawi/yoono-uuid"
 )
 
+//StreamNamer is the interface that stream name delegates should implement.
 type StreamNamer interface {
 	GetStreamName(string, uuid.UUID) (string, error)
 }
 
+//DelegateStreamNamer stores delegates per aggregate type allowing fine grained
+//control of stream names for event streams.
 type DelegateStreamNamer struct {
 	delegates map[string]func(string, uuid.UUID) string
 }
 
+//NewDelegateStreamNamer constructs a delegate stream namer
 func NewDelegateStreamNamer() *DelegateStreamNamer {
 	return &DelegateStreamNamer{
 		delegates: make(map[string]func(string, uuid.UUID) string),
 	}
 }
 
+//RegisterDelegate allows registration of a stream name delegate function for
+//the aggregates specified in the variadic aggregates argument.
 func (r *DelegateStreamNamer) RegisterDelegate(delegate func(string, uuid.UUID) string, aggregates ...AggregateRoot) error {
 	for _, aggregate := range aggregates {
 		typeName := typeOf(aggregate)
@@ -31,6 +37,7 @@ func (r *DelegateStreamNamer) RegisterDelegate(delegate func(string, uuid.UUID) 
 	return nil
 }
 
+//GetStreamName gets the result of the stream name delgate registered for the aggregate type.
 func (r *DelegateStreamNamer) GetStreamName(aggregateTypeName string, id uuid.UUID) (string, error) {
 	if f, ok := r.delegates[aggregateTypeName]; ok {
 		return f(aggregateTypeName, id), nil

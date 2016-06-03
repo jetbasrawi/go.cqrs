@@ -1,5 +1,6 @@
 package ycq
 
+//EventBus is the inteface that an event bus must implement.
 type EventBus interface {
 	PublishEvent(EventMessage)
 	AddHandler(EventHandler, ...interface{})
@@ -7,12 +8,14 @@ type EventBus interface {
 	AddGlobalHandler(EventHandler)
 }
 
+//InternalEventBus provides a lightweight in process event bus
 type InternalEventBus struct {
 	eventHandlers  map[string]map[EventHandler]struct{}
 	localHandlers  map[EventHandler]struct{}
 	globalHandlers map[EventHandler]struct{}
 }
 
+//NewInternalEventBus constructs a new InternalEventBus
 func NewInternalEventBus() *InternalEventBus {
 	b := &InternalEventBus{
 		eventHandlers:  make(map[string]map[EventHandler]struct{}),
@@ -22,6 +25,7 @@ func NewInternalEventBus() *InternalEventBus {
 	return b
 }
 
+//PublishEvent publishes events to all registered event handlers
 func (b *InternalEventBus) PublishEvent(event EventMessage) {
 	if handlers, ok := b.eventHandlers[event.EventType()]; ok {
 		for handler := range handlers {
@@ -36,6 +40,9 @@ func (b *InternalEventBus) PublishEvent(event EventMessage) {
 		handler.Handle(event)
 	}
 }
+
+//AddHandler registers an event handler for all of the events specified in the
+//variadic events parameter.
 func (b *InternalEventBus) AddHandler(handler EventHandler, events ...interface{}) {
 
 	for _, event := range events {
@@ -48,10 +55,12 @@ func (b *InternalEventBus) AddHandler(handler EventHandler, events ...interface{
 	}
 }
 
+//TODO
 func (b *InternalEventBus) AddLocalHandler(handler EventHandler) {
 	b.localHandlers[handler] = struct{}{}
 }
 
+//TODO
 func (b *InternalEventBus) AddGlobalHandler(handler EventHandler) {
 	b.globalHandlers[handler] = struct{}{}
 }

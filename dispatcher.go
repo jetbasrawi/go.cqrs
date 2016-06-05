@@ -13,13 +13,13 @@ import (
 //The dispatcher is the mechanism through which commands are distributed to
 //the appropriate command handler.
 //
-//Command handlers are registered with the dispatcher for a given command type. 
-//It is good practice in CQRS to have only one command handler for a given command. 
+//Command handlers are registered with the dispatcher for a given command type.
+//It is good practice in CQRS to have only one command handler for a given command.
 //When a command is passed to the dispatcher it will look for the registered command
 //handler and call that handler's Handle method passing the command message as an
-//argument. 
+//argument.
 //
-//Commands contained in a CommandMessage envelope are passed to the Dispatcher via 
+//Commands contained in a CommandMessage envelope are passed to the Dispatcher via
 //the dispatch method.
 type Dispatcher interface {
 	Dispatch(CommandMessage) error
@@ -53,7 +53,7 @@ func (b *InMemoryDispatcher) RegisterHandler(handler CommandHandler, commands ..
 	for _, command := range commands {
 		typeName := typeOf(command)
 		if _, ok := b.handlers[typeName]; ok {
-			return fmt.Errorf("Duplicate command handler registration with command bus for command of type: %d", typeName)
+			return fmt.Errorf("Duplicate command handler registration with command bus for command of type: %s", typeName)
 		}
 		b.handlers[typeName] = handler
 	}

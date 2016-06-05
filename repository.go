@@ -186,7 +186,7 @@ func (r *CommonDomainRepository) Save(aggregate AggregateRoot) error {
 			evs[k] = goes.ToEventData("", v.EventType(), v.Event(), v.GetHeaders())
 		}
 
-		resp, err := r.eventStore.AppendToStream(streamName, &goes.StreamVersion{expectedVersion}, evs...)
+		resp, err := r.eventStore.AppendToStream(streamName, &goes.StreamVersion{Number: expectedVersion}, evs...)
 		if err != nil {
 			if resp.StatusCode == http.StatusBadRequest {
 				return &ConcurrencyError{Aggregate: aggregate, ExpectedVersion: expectedVersion, StreamName: streamName}

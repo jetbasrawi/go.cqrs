@@ -44,7 +44,7 @@ func (s *InternalCommandBusSuite) TestShouldReturnErrorIfNoHandlerRegisteredForC
 
 func (s *InternalCommandBusSuite) TestDuplicateHandlerRegistrationReturnsAnError(c *C) {
 	err := s.bus.RegisterHandler(s.stubhandler, &SomeCommand{}, &SomeCommand{})
-	c.Assert(err, DeepEquals, fmt.Errorf("Duplicate command handler registration with command bus for command of type: %d",
+	c.Assert(err, DeepEquals, fmt.Errorf("Duplicate command handler registration with command bus for command of type: %s",
 		typeOf(&SomeCommand{"", 0})))
 }
 

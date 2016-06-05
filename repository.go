@@ -9,8 +9,7 @@ import (
 	"github.com/jetbasrawi/yoono-uuid"
 )
 
-//GetEventStoreRepositoryClient
-//TODO: Remove this as it is not generic enough. Replace with a generic eventStore interface
+//GetEventStoreRepositoryClient is an interface that reflects the goes client.
 type GetEventStoreRepositoryClient interface {
 	ReadStreamForwardAsync(string, *goes.StreamVersion, *goes.Take, int) <-chan *goes.AsyncResponse
 	AppendToStream(string, *goes.StreamVersion, ...*goes.Event) (*goes.Response, error)

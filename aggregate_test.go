@@ -1,7 +1,6 @@
 package ycq
 
 import (
-	"github.com/jetbasrawi/yoono-uuid"
 	. "gopkg.in/check.v1"
 )
 
@@ -64,7 +63,7 @@ type SomeAggregate struct {
 	events []EventMessage
 }
 
-func NewSomeAggregate(id uuid.UUID) AggregateRoot {
+func NewSomeAggregate(id string) AggregateRoot {
 	return &SomeAggregate{
 		AggregateBase: NewAggregateBase(id),
 	}
@@ -83,7 +82,7 @@ type SomeOtherAggregate struct {
 	changes []EventMessage
 }
 
-func NewSomeOtherAggregate(id uuid.UUID) AggregateRoot {
+func NewSomeOtherAggregate(id string) AggregateRoot {
 	return &SomeOtherAggregate{
 		AggregateBase: NewAggregateBase(id),
 	}

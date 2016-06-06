@@ -1,7 +1,6 @@
 package ycq
 
 import (
-	"github.com/jetbasrawi/yoono-uuid"
 	. "gopkg.in/check.v1"
 )
 
@@ -20,10 +19,10 @@ func (t *TestCommandHandler) Handle(command CommandMessage) error {
 }
 
 type MockRepository struct {
-	aggregates map[uuid.UUID]AggregateRoot
+	aggregates map[string]AggregateRoot
 }
 
-func (m *MockRepository) Load(aggregateType string, id uuid.UUID) (AggregateRoot, error) {
+func (m *MockRepository) Load(aggregateType string, id string) (AggregateRoot, error) {
 	return m.aggregates[id], nil
 }
 

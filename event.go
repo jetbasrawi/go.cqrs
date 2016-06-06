@@ -4,15 +4,11 @@
 // license that can be found in the LICENSE file.
 package ycq
 
-import (
-	"github.com/jetbasrawi/yoono-uuid"
-)
-
 //EventMessage is the interface that a command must implement.
 type EventMessage interface {
 
 	//AggregateID returns the ID of the Aggregate that the event relates to
-	AggregateID() uuid.UUID
+	AggregateID() string
 
 	//GetHeaders returns the key value collection of headers for the event.
 	//
@@ -32,13 +28,13 @@ type EventMessage interface {
 
 //EventDescriptor is an implementation of the event message interface.
 type EventDescriptor struct {
-	id      uuid.UUID
+	id      string
 	event   interface{}
 	headers map[string]interface{}
 }
 
 //NewEventMessage returns a new event descriptor
-func NewEventMessage(aggregateID uuid.UUID, event interface{}) *EventDescriptor {
+func NewEventMessage(aggregateID string, event interface{}) *EventDescriptor {
 	return &EventDescriptor{
 		id:      aggregateID,
 		event:   event,
@@ -52,7 +48,7 @@ func (c *EventDescriptor) EventType() string {
 }
 
 //AggregateID returns the ID of the Aggregate that the event relates to.
-func (c *EventDescriptor) AggregateID() uuid.UUID {
+func (c *EventDescriptor) AggregateID() string {
 	return c.id
 }
 

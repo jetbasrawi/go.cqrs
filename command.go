@@ -4,15 +4,11 @@
 // license that can be found in the LICENSE file.
 package ycq
 
-import (
-	"github.com/jetbasrawi/yoono-uuid"
-)
-
 //CommandMessage is the interface that a command message must implement.
 type CommandMessage interface {
 
 	//AggregateID returns the ID of the Aggregate that the command relates to
-	AggregateID() uuid.UUID
+	AggregateID() string
 
 	//Headers returns the key value collection of headers for the command.
 	Headers() map[string]interface{}
@@ -29,13 +25,13 @@ type CommandMessage interface {
 
 //CommandDescriptor is an implementation of the command message interface.
 type CommandDescriptor struct {
-	id      uuid.UUID
+	id      string
 	command interface{}
 	headers map[string]interface{}
 }
 
 //NewCommandMessage returns a new command descriptor
-func NewCommandMessage(aggregateID uuid.UUID, command interface{}) *CommandDescriptor {
+func NewCommandMessage(aggregateID string, command interface{}) *CommandDescriptor {
 	return &CommandDescriptor{
 		id:      aggregateID,
 		command: command,
@@ -49,7 +45,7 @@ func (c *CommandDescriptor) CommandType() string {
 }
 
 //AggregateID returns the ID of the aggregate that the command relates to.
-func (c *CommandDescriptor) AggregateID() uuid.UUID {
+func (c *CommandDescriptor) AggregateID() string {
 	return c.id
 }
 

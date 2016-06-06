@@ -2,7 +2,6 @@ package ycq
 
 import (
 	"fmt"
-	"github.com/jetbasrawi/yoono-uuid"
 	. "gopkg.in/check.v1"
 )
 
@@ -23,7 +22,7 @@ func (s *DelegateAggregateFactorySuite) TestNewAggregateFactory(c *C) {
 
 func (s *DelegateAggregateFactorySuite) TestCanRegisterAggregateFactoryDelegate(c *C) {
 	err := s.factory.RegisterDelegate(&SomeAggregate{},
-		func(id uuid.UUID) AggregateRoot { return NewSomeAggregate(id) })
+		func(id string) AggregateRoot { return NewSomeAggregate(id) })
 
 	c.Assert(err, IsNil)
 
@@ -35,12 +34,12 @@ func (s *DelegateAggregateFactorySuite) TestCanRegisterAggregateFactoryDelegate(
 
 func (s *DelegateAggregateFactorySuite) TestDuplicateAggregateFactoryRegistrationReturnsAnError(c *C) {
 	err := s.factory.RegisterDelegate(&SomeAggregate{},
-		func(id uuid.UUID) AggregateRoot { return NewSomeAggregate(id) })
+		func(id string) AggregateRoot { return NewSomeAggregate(id) })
 
 	c.Assert(err, IsNil)
 
 	err = s.factory.RegisterDelegate(&SomeAggregate{},
-		func(id uuid.UUID) AggregateRoot { return NewSomeAggregate(id) })
+		func(id string) AggregateRoot { return NewSomeAggregate(id) })
 
 	c.Assert(err, NotNil)
 	c.Assert(err,
@@ -51,7 +50,7 @@ func (s *DelegateAggregateFactorySuite) TestDuplicateAggregateFactoryRegistratio
 
 func (s *DelegateAggregateFactorySuite) TestCanGetAggregateInstanceFromString(c *C) {
 	_ = s.factory.RegisterDelegate(&SomeAggregate{},
-		func(id uuid.UUID) AggregateRoot { return NewSomeAggregate(id) })
+		func(id string) AggregateRoot { return NewSomeAggregate(id) })
 
 	id := yooid()
 	ev := s.factory.GetAggregate(typeOf(&SomeAggregate{}), id)

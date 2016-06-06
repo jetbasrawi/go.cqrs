@@ -3,7 +3,6 @@ package ycq
 import (
 	"math/rand"
 
-	"github.com/jetbasrawi/yoono-uuid"
 	. "gopkg.in/check.v1"
 )
 
@@ -18,11 +17,11 @@ type SomeEvent struct {
 }
 
 type SomeOtherEvent struct {
-	OrderID uuid.UUID
+	OrderID string
 }
 
-func NewTestEventMessage(id uuid.UUID) *EventDescriptor {
-	ev := &SomeEvent{Item: yooid().String(), Count: rand.Intn(100)}
+func NewTestEventMessage(id string) *EventDescriptor {
+	ev := &SomeEvent{Item: yooid(), Count: rand.Intn(100)}
 	return NewEventMessage(id, ev)
 }
 

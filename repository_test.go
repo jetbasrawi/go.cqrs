@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/jetbasrawi/goes"
-	"github.com/jetbasrawi/yoono-uuid"
 	. "gopkg.in/check.v1"
 )
 
@@ -38,11 +37,11 @@ func (s *ComDomRepoSuite) SetUpTest(c *C) {
 
 	aggregateFactory := NewDelegateAggregateFactory()
 	aggregateFactory.RegisterDelegate(&SomeAggregate{},
-		func(id uuid.UUID) AggregateRoot { return NewSomeAggregate(id) })
+		func(id string) AggregateRoot { return NewSomeAggregate(id) })
 	s.repo.aggregateFactory = aggregateFactory
 
 	streamNameDelegate := NewDelegateStreamNamer()
-	streamNameDelegate.RegisterDelegate(func(at string, id uuid.UUID) string { return at + id.String() },
+	streamNameDelegate.RegisterDelegate(func(at string, id string) string { return at + id },
 		&SomeAggregate{},
 		&SomeOtherAggregate{},
 		&StubAggregate{})
@@ -101,7 +100,7 @@ func (s *ComDomRepoSuite) TestRepositoryCanLoadAggregateWithEvents(c *C) {
 	id := yooid()
 	aggregateFactory := NewDelegateAggregateFactory()
 	aggregateFactory.RegisterDelegate(&StubAggregate{},
-		func(id uuid.UUID) AggregateRoot { return NewStubAggregate(id) })
+		func(id string) AggregateRoot { return NewStubAggregate(id) })
 	s.repo.SetAggregateFactory(aggregateFactory)
 
 	got, err := s.repo.Load(typeOf(&StubAggregate{}), id)
@@ -164,7 +163,7 @@ func (s *ComDomRepoSuite) TestNoAggregateFactoryReturnsErrorOnLoad(c *C) {
 
 func (s *ComDomRepoSuite) TestRepositoryReturnsAnErrorIfAggregateFactoryNotRegisteredForAnAggregate(c *C) {
 	aggregateFactory := NewDelegateAggregateFactory()
-	aggregateFactory.RegisterDelegate(&SomeOtherAggregate{}, func(id uuid.UUID) AggregateRoot { return NewSomeOtherAggregate(id) })
+	aggregateFactory.RegisterDelegate(&SomeOtherAggregate{}, func(id string) AggregateRoot { return NewSomeOtherAggregate(id) })
 	s.repo.SetAggregateFactory(aggregateFactory)
 
 	id := yooid()
@@ -188,7 +187,7 @@ func (s *ComDomRepoSuite) TestCanRegisterStreamNameDelegate(c *C) {
 func (s *ComDomRepoSuite) TestReturnsErrorOnLoadIfStreamNameDelegateNotRegisteredForAggregate(c *C) {
 	id := yooid()
 	streamNameDelegate := NewDelegateStreamNamer()
-	streamNameDelegate.RegisterDelegate(func(t string, id uuid.UUID) string { return "something" },
+	streamNameDelegate.RegisterDelegate(func(t string, id string) string { return "something" },
 		&SomeOtherAggregate{})
 	s.repo.SetStreamNameDelegate(streamNameDelegate)
 	typeName := typeOf(&SomeAggregate{})
@@ -204,7 +203,7 @@ func (s *ComDomRepoSuite) TestReturnsErrorOnLoadIfStreamNameDelegateNotRegistere
 func (s *ComDomRepoSuite) TestStreamNameIsBuiltByStreamNameDelegateOnSave(c *C) {
 	id := yooid()
 	agg := NewSomeAggregate(id)
-	f := func(t string, id uuid.UUID) string { return "BoundedContext-" + id.String() }
+	f := func(t string, id string) string { return "BoundedContext-" + id }
 	d := NewDelegateStreamNamer()
 	d.RegisterDelegate(f, agg)
 	s.repo.streamNameDelegate = d
@@ -220,7 +219,7 @@ func (s *ComDomRepoSuite) TestStreamNameIsBuiltByStreamNameDelegateOnSave(c *C) 
 func (s *ComDomRepoSuite) TestStreamNameIsBuiltByDelegateOnLoad(c *C) {
 	id := yooid()
 	agg := NewSomeAggregate(id)
-	f := func(t string, id uuid.UUID) string { return "xyz-" + id.String() }
+	f := func(t string, id string) string { return "xyz-" + id }
 	d := NewDelegateStreamNamer()
 	d.RegisterDelegate(f, agg)
 	s.repo.streamNameDelegate = d
@@ -233,7 +232,7 @@ func (s *ComDomRepoSuite) TestStreamNameIsBuiltByDelegateOnLoad(c *C) {
 
 func (s *ComDomRepoSuite) TestReturnsErrorOnSaveIfStreamNameDelegateNotRegisteredForAnAggregate(c *C) {
 	streamNameDelegate := NewDelegateStreamNamer()
-	streamNameDelegate.RegisterDelegate(func(t string, id uuid.UUID) string { return "something" })
+	streamNameDelegate.RegisterDelegate(func(t string, id string) string { return "something" })
 	s.repo.SetStreamNameDelegate(streamNameDelegate)
 	agg := NewSomeAggregate(yooid())
 
@@ -380,7 +379,7 @@ func (s *ComDomRepoSuite) TestSaveForwardsUnhandledErrors(c *C) {
 //////////////////////////////////////////////////////////////////////////////
 // Fakes
 
-func NewStubAggregate(id uuid.UUID) *StubAggregate {
+func NewStubAggregate(id string) *StubAggregate {
 
 	return &StubAggregate{
 		AggregateBase: NewAggregateBase(id),

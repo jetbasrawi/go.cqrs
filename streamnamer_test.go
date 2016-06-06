@@ -3,7 +3,6 @@ package ycq
 import (
 	"fmt"
 
-	"github.com/jetbasrawi/yoono-uuid"
 	. "gopkg.in/check.v1"
 )
 
@@ -24,18 +23,18 @@ func (s *DelegateStreamNamerSuite) TestNewDelegateStreamNamer(c *C) {
 
 func (s *DelegateStreamNamerSuite) TestCanRegisterStreamNameDelegate(c *C) {
 
-	err := s.namer.RegisterDelegate(func(a string, id uuid.UUID) string { return id.String() + a },
+	err := s.namer.RegisterDelegate(func(a string, id string) string { return id + a },
 		&SomeAggregate{},
 	)
 	c.Assert(err, IsNil)
 	agg := NewSomeAggregate(yooid())
 	f, _ := s.namer.delegates[typeOf(agg)]
 	stream := f(typeOf(agg), agg.AggregateID())
-	c.Assert(stream, Equals, agg.AggregateID().String()+typeOf(agg))
+	c.Assert(stream, Equals, agg.AggregateID()+typeOf(agg))
 }
 
 func (s *DelegateStreamNamerSuite) TestCanRegisterStreamNameDelegateWithMultipleAggregateRoots(c *C) {
-	err := s.namer.RegisterDelegate(func(a string, id uuid.UUID) string { return id.String() + a },
+	err := s.namer.RegisterDelegate(func(a string, id string) string { return id + a },
 		&SomeAggregate{},
 		&SomeOtherAggregate{},
 	)
@@ -44,27 +43,27 @@ func (s *DelegateStreamNamerSuite) TestCanRegisterStreamNameDelegateWithMultiple
 	ar1 := NewSomeAggregate(yooid())
 	f, _ := s.namer.delegates[typeOf(ar1)]
 	stream := f(typeOf(ar1), ar1.AggregateID())
-	c.Assert(stream, Equals, ar1.AggregateID().String()+typeOf(ar1))
+	c.Assert(stream, Equals, ar1.AggregateID()+typeOf(ar1))
 
 	ar2 := NewSomeOtherAggregate(yooid())
 	f2, _ := s.namer.delegates[typeOf(ar2)]
 	stream2 := f2(typeOf(ar2), ar2.AggregateID())
-	c.Assert(stream2, Equals, ar2.AggregateID().String()+typeOf(ar2))
+	c.Assert(stream2, Equals, ar2.AggregateID()+typeOf(ar2))
 }
 
 func (s *DelegateStreamNamerSuite) TestCanGetStreamName(c *C) {
-	err := s.namer.RegisterDelegate(func(a string, id uuid.UUID) string { return id.String() + a },
+	err := s.namer.RegisterDelegate(func(a string, id string) string { return id + a },
 		&SomeAggregate{},
 	)
 	c.Assert(err, IsNil)
 	agg := NewSomeAggregate(yooid())
 	stream, err := s.namer.GetStreamName(typeOf(agg), agg.AggregateID())
 	c.Assert(err, IsNil)
-	c.Assert(stream, Equals, agg.AggregateID().String()+typeOf(agg))
+	c.Assert(stream, Equals, agg.AggregateID()+typeOf(agg))
 }
 
 func (s *DelegateStreamNamerSuite) TestGetStreamNameReturnsAnErrorIfNoDelegateRegisteredForAggregate(c *C) {
-	err := s.namer.RegisterDelegate(func(a string, id uuid.UUID) string { return id.String() + a },
+	err := s.namer.RegisterDelegate(func(a string, id string) string { return id + a },
 		&SomeAggregate{},
 	)
 	agg := NewSomeOtherAggregate(yooid())
@@ -78,12 +77,12 @@ func (s *DelegateStreamNamerSuite) TestGetStreamNameReturnsAnErrorIfNoDelegateRe
 
 func (s *DelegateStreamNamerSuite) TestRegisteringAStreamNameDelegateMoreThanOnceReturnsAndError(c *C) {
 
-	err := s.namer.RegisterDelegate(func(a string, id uuid.UUID) string { return id.String() + a },
+	err := s.namer.RegisterDelegate(func(a string, id string) string { return id + a },
 		&SomeAggregate{},
 	)
 	c.Assert(err, IsNil)
 
-	err = s.namer.RegisterDelegate(func(a string, id uuid.UUID) string { return id.String() + a },
+	err = s.namer.RegisterDelegate(func(a string, id string) string { return id + a },
 		&SomeAggregate{},
 	)
 	c.Assert(err, DeepEquals,

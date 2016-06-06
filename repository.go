@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/jetbasrawi/goes"
-	"github.com/jetbasrawi/yoono-uuid"
 )
 
 //GetEventStoreRepositoryClient is an interface that reflects the goes client.
@@ -17,14 +16,14 @@ type GetEventStoreRepositoryClient interface {
 
 //AggregateNotFoundError error returned when an aggregate was not found in the repository.
 type AggregateNotFoundError struct {
-	AggregateID   uuid.UUID
+	AggregateID   string
 	AggregateType string
 }
 
 func (e *AggregateNotFoundError) Error() string {
 	return fmt.Sprintf("Could not find any aggregate of type %s with id %s",
 		e.AggregateType,
-		e.AggregateID.String())
+		e.AggregateID)
 }
 
 //ConcurrencyError is returned when a concurrency error is raised by the event store
@@ -37,13 +36,13 @@ type ConcurrencyError struct {
 }
 
 func (e *ConcurrencyError) Error() string {
-	return fmt.Sprintf("ConcurrencyError: AggregateID: %s ExpectedVersion: %d StreamName: %s", e.Aggregate.AggregateID().String(), e.ExpectedVersion, e.StreamName)
+	return fmt.Sprintf("ConcurrencyError: AggregateID: %s ExpectedVersion: %d StreamName: %s", e.Aggregate.AggregateID(), e.ExpectedVersion, e.StreamName)
 }
 
 //DomainRepository is the interface that all domain repositories should implement.
 type DomainRepository interface {
 	//Loads an aggregate of the given type and ID
-	Load(string, uuid.UUID) (AggregateRoot, error)
+	Load(string, string) (AggregateRoot, error)
 
 	//Saves the aggregate.
 	Save(AggregateRoot) error
@@ -99,7 +98,7 @@ func (r *CommonDomainRepository) SetStreamNameDelegate(delegate StreamNamer) {
 }
 
 //Load loads the aggragate with the specified type and ID
-func (r *CommonDomainRepository) Load(aggregateType string, id uuid.UUID) (AggregateRoot, error) {
+func (r *CommonDomainRepository) Load(aggregateType string, id string) (AggregateRoot, error) {
 
 	if r.aggregateFactory == nil {
 		return nil, fmt.Errorf("The common domain repository has no Aggregate Factory.")
@@ -182,7 +181,7 @@ func (r *CommonDomainRepository) Save(aggregate AggregateRoot) error {
 
 		for k, v := range resultEvents {
 			//TODO: There is no test for this code
-			v.SetHeader("AggregateID", aggregate.AggregateID().String())
+			v.SetHeader("AggregateID", aggregate.AggregateID())
 			evs[k] = goes.ToEventData("", v.EventType(), v.Event(), v.GetHeaders())
 		}
 

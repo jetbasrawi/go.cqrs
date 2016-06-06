@@ -3,7 +3,6 @@ package ycq
 import (
 	"math/rand"
 
-	"github.com/jetbasrawi/yoono-uuid"
 	. "gopkg.in/check.v1"
 )
 
@@ -16,16 +15,16 @@ type SomeCommand struct {
 	Count int
 }
 
-func NewSomeCommandMessage(id uuid.UUID) *CommandDescriptor {
-	ev := &SomeCommand{Item: yooid().String(), Count: rand.Intn(100)}
+func NewSomeCommandMessage(id string) *CommandDescriptor {
+	ev := &SomeCommand{Item: yooid(), Count: rand.Intn(100)}
 	return NewCommandMessage(id, ev)
 }
 
 type SomeOtherCommand struct {
-	OrderID uuid.UUID
+	OrderID string
 }
 
-func NewSomeOtherCommandMessage(id uuid.UUID) *CommandDescriptor {
+func NewSomeOtherCommandMessage(id string) *CommandDescriptor {
 	ev := &SomeOtherCommand{id}
 	return NewCommandMessage(id, ev)
 }

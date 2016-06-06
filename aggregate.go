@@ -4,11 +4,9 @@
 // license that can be found in the LICENSE file.
 package ycq
 
-import "github.com/jetbasrawi/yoono-uuid"
-
 //AggregateRoot is the interface that all aggregates should implement
 type AggregateRoot interface {
-	AggregateID() uuid.UUID
+	AggregateID() string
 	Version() int
 	IncrementVersion()
 	Apply(events EventMessage, isNew bool)
@@ -24,13 +22,13 @@ type AggregateRoot interface {
 //Aggregate root interface your aggregate will need to implement the Apply
 //method that will contain behaviour specific to your aggregate.
 type AggregateBase struct {
-	id      uuid.UUID
+	id      string
 	version int
 	changes []EventMessage
 }
 
 //NewAggregateBase contructs a new AggregateBase.
-func NewAggregateBase(id uuid.UUID) *AggregateBase {
+func NewAggregateBase(id string) *AggregateBase {
 	return &AggregateBase{
 		id:      id,
 		changes: []EventMessage{},
@@ -38,7 +36,7 @@ func NewAggregateBase(id uuid.UUID) *AggregateBase {
 }
 
 //AggregateID returns the AggregateID
-func (a *AggregateBase) AggregateID() uuid.UUID {
+func (a *AggregateBase) AggregateID() string {
 	return a.id
 }
 

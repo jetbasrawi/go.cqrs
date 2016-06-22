@@ -1,18 +1,14 @@
 package ycq
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"time"
 
 	"github.com/jetbasrawi/goes"
+	"github.com/mgutz/logxi/v1"
 )
-
-//GetEventStoreRepositoryClient is an interface that reflects the goes client.
-type GetEventStoreRepositoryClient interface {
-	ReadStreamForwardAsync(string, *goes.StreamVersion, *goes.Take, int) <-chan *goes.AsyncResponse
-	AppendToStream(string, *goes.StreamVersion, ...*goes.Event) (*goes.Response, error)
-}
 
 //AggregateNotFoundError error returned when an aggregate was not found in the repository.
 type AggregateNotFoundError struct {
@@ -50,7 +46,7 @@ type DomainRepository interface {
 
 //CommonDomainRepository is a generic repository implementation
 type CommonDomainRepository struct {
-	eventStore         GetEventStoreRepositoryClient
+	eventStore         *goes.Client
 	eventBus           EventBus
 	streamNameDelegate StreamNamer
 	aggregateFactory   AggregateFactory
@@ -58,7 +54,7 @@ type CommonDomainRepository struct {
 }
 
 //NewCommonDomainRepository constructs a new CommonDomainRepository
-func NewCommonDomainRepository(eventStore GetEventStoreRepositoryClient, eventBus EventBus) (*CommonDomainRepository, error) {
+func NewCommonDomainRepository(eventStore *goes.Client, eventBus EventBus) (*CommonDomainRepository, error) {
 	if eventStore == nil {
 		return nil, fmt.Errorf("Nil Eventstore injected into repository.")
 	}
@@ -97,7 +93,6 @@ func (r *CommonDomainRepository) SetStreamNameDelegate(delegate StreamNamer) {
 	r.streamNameDelegate = delegate
 }
 
-//Load loads the aggragate with the specified type and ID
 func (r *CommonDomainRepository) Load(aggregateType string, id string) (AggregateRoot, error) {
 
 	if r.aggregateFactory == nil {
@@ -117,46 +112,53 @@ func (r *CommonDomainRepository) Load(aggregateType string, id string) (Aggregat
 		return nil, fmt.Errorf("The repository has no aggregate factory registered for aggregate type: %s", aggregateType)
 	}
 
-	stream, err := r.streamNameDelegate.GetStreamName(aggregateType, id)
+	streamName, err := r.streamNameDelegate.GetStreamName(aggregateType, id)
 	if err != nil {
 		return nil, err
 	}
 
-	eventsChannel := r.eventStore.ReadStreamForwardAsync(stream, nil, nil, 0)
+	stream := r.eventStore.NewStreamReader(streamName)
+	for stream.Next() {
 
-	for {
-		select {
-		case ev, open := <-eventsChannel:
-			if !open {
+		//fmt.Printf("Version: %d\n", stream.Version())
+		//spew.Dump(stream.EventResponse())
+
+		//If its a connection error retry every 30 secs
+		if stream.Err() != nil {
+			if e, ok := stream.Err().(*url.Error); ok {
+				log.Error("Error connecting to eventstore", "err", e.Err)
+				<-time.After(30 * time.Second)
+				continue
+			}
+			switch stream.Err() {
+			case goes.ErrNoEvents:
 				return aggregate, nil
+			case goes.ErrUnauthorized:
+				return nil, stream.Err()
+			case goes.ErrStreamDoesNotExist:
+				return nil, &AggregateNotFoundError{AggregateType: aggregateType, AggregateID: id}
 			}
-
-			if ev.Err != nil {
-				if ev.Resp.StatusCode == http.StatusNotFound {
-					return nil, &AggregateNotFoundError{AggregateType: aggregateType, AggregateID: id}
-				}
-
-				return nil, ev.Err
-			}
-
-			event := r.eventFactory.GetEvent(ev.EventResp.Event.EventType)
-			if event == nil {
-				return nil, fmt.Errorf("The event type %s is not registered with the eventstore.", ev.EventResp.Event.EventType)
-			}
-
-			data, ok := ev.EventResp.Event.Data.(*json.RawMessage)
-			if !ok {
-				return nil, fmt.Errorf("Common domain repository could not unmarshal even. Event data is not of type *json.RawMessage")
-			}
-
-			if err := json.Unmarshal(*data, event); err != nil {
-				return nil, err
-			}
-			em := NewEventMessage(id, event)
-			aggregate.Apply(em, false)
-			aggregate.IncrementVersion()
 		}
+
+		event := r.eventFactory.GetEvent(stream.EventResponse().Event.EventType)
+
+		//TODO: No test for meta
+		meta := make(map[string]string)
+		stream.Scan(event, &meta)
+		if stream.Err() != nil {
+			return nil, stream.Err()
+		}
+		em := NewEventMessage(id, event)
+		for k, v := range meta {
+			em.SetHeader(k, v)
+		}
+		aggregate.Apply(em, false)
+		aggregate.IncrementVersion()
+
 	}
+
+	return aggregate, nil
+
 }
 
 //Save persists an aggregate
@@ -185,8 +187,15 @@ func (r *CommonDomainRepository) Save(aggregate AggregateRoot) error {
 			evs[k] = goes.ToEventData("", v.EventType(), v.Event(), v.GetHeaders())
 		}
 
-		resp, err := r.eventStore.AppendToStream(streamName, &goes.StreamVersion{Number: expectedVersion}, evs...)
+		streamWriter := r.eventStore.NewStreamWriter(streamName)
+		resp, err := streamWriter.Append(&goes.StreamVersion{Number: expectedVersion}, evs...)
 		if err != nil {
+
+			//TODO: No test for this error handling
+			if resp == nil {
+				return err
+			}
+
 			if resp.StatusCode == http.StatusBadRequest {
 				return &ConcurrencyError{Aggregate: aggregate, ExpectedVersion: expectedVersion, StreamName: streamName}
 			}

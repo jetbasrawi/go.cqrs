@@ -4,11 +4,16 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/jetbasrawi/goes"
-	"github.com/mgutz/logxi/v1"
 )
+
+//Error is returned when the eventstore is temporarily unavailable
+type RepositoryUnavailableError struct{}
+
+func (e *RepositoryUnavailableError) Error() string {
+	return "The repository is temporarily unavailable."
+}
 
 //AggregateNotFoundError error returned when an aggregate was not found in the repository.
 type AggregateNotFoundError struct {
@@ -120,23 +125,18 @@ func (r *CommonDomainRepository) Load(aggregateType string, id string) (Aggregat
 	stream := r.eventStore.NewStreamReader(streamName)
 	for stream.Next() {
 
-		//fmt.Printf("Version: %d\n", stream.Version())
-		//spew.Dump(stream.EventResponse())
-
-		//If its a connection error retry every 30 secs
 		if stream.Err() != nil {
-			if e, ok := stream.Err().(*url.Error); ok {
-				log.Error("Error connecting to eventstore", "err", e.Err)
-				<-time.After(30 * time.Second)
-				continue
-			}
-			switch stream.Err() {
-			case goes.ErrNoEvents:
+			switch err := stream.Err().(type) {
+			case *url.Error, *goes.TemporarilyUnavailableError:
+				return nil, &RepositoryUnavailableError{}
+			case *goes.NoMoreEventsError:
 				return aggregate, nil
-			case goes.ErrUnauthorized:
-				return nil, stream.Err()
-			case goes.ErrStreamDoesNotExist:
+			case *goes.UnauthorizedError:
+				return nil, err
+			case *goes.StreamDoesNotExistError:
 				return nil, &AggregateNotFoundError{AggregateType: aggregateType, AggregateID: id}
+			default:
+				return nil, err
 			}
 		}
 

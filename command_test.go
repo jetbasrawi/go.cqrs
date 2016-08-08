@@ -1,3 +1,8 @@
+// Copyright 2016 Jet Basrawi. All rights reserved.
+//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file.
+
 package ycq
 
 import (
@@ -16,7 +21,7 @@ type SomeCommand struct {
 }
 
 func NewSomeCommandMessage(id string) *CommandDescriptor {
-	ev := &SomeCommand{Item: yooid(), Count: rand.Intn(100)}
+	ev := &SomeCommand{Item: NewUUID(), Count: rand.Intn(100)}
 	return NewCommandMessage(id, ev)
 }
 
@@ -34,7 +39,7 @@ type ErrorCommand struct {
 }
 
 func (s *CommandSuite) TestNewCommandMessage(c *C) {
-	id := yooid()
+	id := NewUUID()
 	cmd := &SomeCommand{Item: "Some String", Count: 43}
 
 	cm := NewCommandMessage(id, cmd)
@@ -55,7 +60,7 @@ func (s *CommandSuite) TestShouldGetTypeOfCommand(c *C) {
 
 func (s *CommandSuite) TestShouldGetHeaders(c *C) {
 	cmd := &SomeCommand{"Some data", 456}
-	cm := NewCommandMessage(yooid(), cmd)
+	cm := NewCommandMessage(NewUUID(), cmd)
 	cm.headers["a"] = "b"
 
 	h := cm.Headers()
@@ -65,7 +70,7 @@ func (s *CommandSuite) TestShouldGetHeaders(c *C) {
 
 func (s *CommandSuite) TestShouldGetCommand(c *C) {
 	cmd := &SomeCommand{"Some data", 456}
-	cm := NewCommandMessage(yooid(), cmd)
+	cm := NewCommandMessage(NewUUID(), cmd)
 
 	got := cm.Command()
 
@@ -74,7 +79,7 @@ func (s *CommandSuite) TestShouldGetCommand(c *C) {
 
 func (s *CommandSuite) TestAddHeaderInt(c *C) {
 	cmd := &SomeCommand{"Some data", 456}
-	cm := NewCommandMessage(yooid(), cmd)
+	cm := NewCommandMessage(NewUUID(), cmd)
 
 	cm.SetHeader("a", 3)
 
@@ -83,7 +88,7 @@ func (s *CommandSuite) TestAddHeaderInt(c *C) {
 
 func (s *CommandSuite) TestAddHeaderString(c *C) {
 	cmd := &SomeCommand{"Some data", 456}
-	cm := NewCommandMessage(yooid(), cmd)
+	cm := NewCommandMessage(NewUUID(), cmd)
 
 	cm.SetHeader("a", "abc")
 
@@ -92,7 +97,7 @@ func (s *CommandSuite) TestAddHeaderString(c *C) {
 
 func (s *CommandSuite) TestAddHeaderStruct(c *C) {
 	cmd := &SomeCommand{"Some data", 456}
-	cm := NewCommandMessage(yooid(), cmd)
+	cm := NewCommandMessage(NewUUID(), cmd)
 
 	cm.SetHeader("a", cmd)
 

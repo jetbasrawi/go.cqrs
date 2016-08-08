@@ -1,21 +1,25 @@
+// Copyright 2016 Jet Basrawi. All rights reserved.
+//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file.
+
 package ycq
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 
-	"github.com/jetbasrawi/goes"
+	"github.com/jetbasrawi/go.geteventstore"
 )
 
-//Error is returned when the eventstore is temporarily unavailable
+// Error is returned when the eventstore is temporarily unavailable
 type RepositoryUnavailableError struct{}
 
 func (e *RepositoryUnavailableError) Error() string {
 	return "The repository is temporarily unavailable."
 }
 
-//AggregateNotFoundError error returned when an aggregate was not found in the repository.
+// AggregateNotFoundError error returned when an aggregate was not found in the repository.
 type AggregateNotFoundError struct {
 	AggregateID   string
 	AggregateType string
@@ -27,20 +31,7 @@ func (e *AggregateNotFoundError) Error() string {
 		e.AggregateID)
 }
 
-//ConcurrencyError is returned when a concurrency error is raised by the event store
-//when events are persisted to a stream and the version of the stream does not match
-//the expected version.
-type ConcurrencyError struct {
-	Aggregate       AggregateRoot
-	ExpectedVersion int
-	StreamName      string
-}
-
-func (e *ConcurrencyError) Error() string {
-	return fmt.Sprintf("ConcurrencyError: AggregateID: %s ExpectedVersion: %d StreamName: %s", e.Aggregate.AggregateID(), e.ExpectedVersion, e.StreamName)
-}
-
-//DomainRepository is the interface that all domain repositories should implement.
+// DomainRepository is the interface that all domain repositories should implement.
 type DomainRepository interface {
 	//Loads an aggregate of the given type and ID
 	Load(string, string) (AggregateRoot, error)
@@ -49,7 +40,7 @@ type DomainRepository interface {
 	Save(AggregateRoot) error
 }
 
-//CommonDomainRepository is a generic repository implementation
+// CommonDomainRepository is a generic repository implementation
 type CommonDomainRepository struct {
 	eventStore         *goes.Client
 	eventBus           EventBus
@@ -58,7 +49,7 @@ type CommonDomainRepository struct {
 	eventFactory       EventFactory
 }
 
-//NewCommonDomainRepository constructs a new CommonDomainRepository
+// NewCommonDomainRepository constructs a new CommonDomainRepository
 func NewCommonDomainRepository(eventStore *goes.Client, eventBus EventBus) (*CommonDomainRepository, error) {
 	if eventStore == nil {
 		return nil, fmt.Errorf("Nil Eventstore injected into repository.")
@@ -75,29 +66,34 @@ func NewCommonDomainRepository(eventStore *goes.Client, eventBus EventBus) (*Com
 	return d, nil
 }
 
-//SetAggregateFactory sets the aggregate factory that should be used to
-//instantate aggregate instances
+// SetAggregateFactory sets the aggregate factory that should be used to
+// instantate aggregate instances
 //
-//Only one AggregateFactory can be registered at any one time.
-//Any registration will overwrite the provious registration.
+// Only one AggregateFactory can be registered at any one time.
+// Any registration will overwrite the provious registration.
 func (r *CommonDomainRepository) SetAggregateFactory(factory AggregateFactory) {
 	r.aggregateFactory = factory
 }
 
-//SetEventFactory sets the event factory that should be used to instantiate event
-//instances.
+// SetEventFactory sets the event factory that should be used to instantiate event
+// instances.
 //
-//Only one event factory can be set at a time. Any subsequent registration will
-//overwrite the previous factory.
+// Only one event factory can be set at a time. Any subsequent registration will
+// overwrite the previous factory.
 func (r *CommonDomainRepository) SetEventFactory(factory EventFactory) {
 	r.eventFactory = factory
 }
 
-//SetStreamNameDelegate sets the stream name delegate
+// SetStreamNameDelegate sets the stream name delegate
 func (r *CommonDomainRepository) SetStreamNameDelegate(delegate StreamNamer) {
 	r.streamNameDelegate = delegate
 }
 
+// Load will load all events from a stream and apply those events to an aggregate
+// of the type specified.
+//
+// The aggregate type and id will be passed to the configured StreamNamer to
+// get the stream name.
 func (r *CommonDomainRepository) Load(aggregateType string, id string) (AggregateRoot, error) {
 
 	if r.aggregateFactory == nil {
@@ -124,20 +120,19 @@ func (r *CommonDomainRepository) Load(aggregateType string, id string) (Aggregat
 
 	stream := r.eventStore.NewStreamReader(streamName)
 	for stream.Next() {
-
-		if stream.Err() != nil {
-			switch err := stream.Err().(type) {
-			case *url.Error, *goes.TemporarilyUnavailableError:
-				return nil, &RepositoryUnavailableError{}
-			case *goes.NoMoreEventsError:
-				return aggregate, nil
-			case *goes.UnauthorizedError:
-				return nil, err
-			case *goes.StreamDoesNotExistError:
-				return nil, &AggregateNotFoundError{AggregateType: aggregateType, AggregateID: id}
-			default:
-				return nil, err
-			}
+		switch err := stream.Err().(type) {
+		case nil:
+			break
+		case *url.Error, *goes.ErrTemporarilyUnavailable:
+			return nil, &RepositoryUnavailableError{}
+		case *goes.ErrNoMoreEvents:
+			return aggregate, nil
+		case *goes.ErrUnauthorized:
+			return nil, &ErrUnauthorized{}
+		case *goes.ErrNotFound:
+			return nil, &AggregateNotFoundError{AggregateType: aggregateType, AggregateID: id}
+		default:
+			return nil, &ErrUnexpected{Err: err}
 		}
 
 		event := r.eventFactory.GetEvent(stream.EventResponse().Event.EventType)
@@ -154,14 +149,13 @@ func (r *CommonDomainRepository) Load(aggregateType string, id string) (Aggregat
 		}
 		aggregate.Apply(em, false)
 		aggregate.IncrementVersion()
-
 	}
 
 	return aggregate, nil
 
 }
 
-//Save persists an aggregate
+// Save persists an aggregate
 func (r *CommonDomainRepository) Save(aggregate AggregateRoot) error {
 
 	if r.streamNameDelegate == nil {
@@ -170,7 +164,7 @@ func (r *CommonDomainRepository) Save(aggregate AggregateRoot) error {
 
 	resultEvents := aggregate.GetChanges()
 
-	expectedVersion := aggregate.Version() - 1
+	expectedVersion := aggregate.Version()
 
 	streamName, err := r.streamNameDelegate.GetStreamName(typeOf(aggregate), aggregate.AggregateID())
 	if err != nil {
@@ -184,23 +178,22 @@ func (r *CommonDomainRepository) Save(aggregate AggregateRoot) error {
 		for k, v := range resultEvents {
 			//TODO: There is no test for this code
 			v.SetHeader("AggregateID", aggregate.AggregateID())
-			evs[k] = goes.ToEventData("", v.EventType(), v.Event(), v.GetHeaders())
+			evs[k] = goes.NewEvent("", v.EventType(), v.Event(), v.GetHeaders())
 		}
 
 		streamWriter := r.eventStore.NewStreamWriter(streamName)
-		resp, err := streamWriter.Append(&goes.StreamVersion{Number: expectedVersion}, evs...)
-		if err != nil {
-
-			//TODO: No test for this error handling
-			if resp == nil {
-				return err
-			}
-
-			if resp.StatusCode == http.StatusBadRequest {
-				return &ConcurrencyError{Aggregate: aggregate, ExpectedVersion: expectedVersion, StreamName: streamName}
-			}
-
-			return err
+		err := streamWriter.Append(&expectedVersion, evs...)
+		switch e := err.(type) {
+		case nil:
+			break
+		case *goes.ErrConcurrencyViolation:
+			return &ConcurrencyError{Aggregate: aggregate, ExpectedVersion: expectedVersion, StreamName: streamName}
+		case *goes.ErrUnauthorized:
+			return &ErrUnauthorized{}
+		case *goes.ErrTemporarilyUnavailable:
+			return &RepositoryUnavailableError{}
+		default:
+			return &ErrUnexpected{Err: e}
 		}
 	}
 

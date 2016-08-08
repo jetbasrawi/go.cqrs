@@ -1,7 +1,13 @@
+// Copyright 2016 Jet Basrawi. All rights reserved.
+//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file.
+
 package ycq
 
 import (
 	"fmt"
+
 	. "gopkg.in/check.v1"
 )
 
@@ -25,7 +31,7 @@ func (s *InternalCommandBusSuite) TestNewInternalCommandBus(c *C) {
 func (s *InternalCommandBusSuite) TestShouldHandleCommand(c *C) {
 	err := s.bus.RegisterHandler(s.stubhandler, &SomeCommand{})
 	c.Assert(err, IsNil)
-	cmd := NewSomeCommandMessage(yooid())
+	cmd := NewSomeCommandMessage(NewUUID())
 
 	err = s.bus.Dispatch(cmd)
 
@@ -34,7 +40,7 @@ func (s *InternalCommandBusSuite) TestShouldHandleCommand(c *C) {
 }
 
 func (s *InternalCommandBusSuite) TestShouldReturnErrorIfNoHandlerRegisteredForCommand(c *C) {
-	cmd := NewSomeCommandMessage(yooid())
+	cmd := NewSomeCommandMessage(NewUUID())
 
 	err := s.bus.Dispatch(cmd)
 

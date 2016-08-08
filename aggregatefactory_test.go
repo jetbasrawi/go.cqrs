@@ -1,7 +1,13 @@
+// Copyright 2016 Jet Basrawi. All rights reserved.
+//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file.
+
 package ycq
 
 import (
 	"fmt"
+
 	. "gopkg.in/check.v1"
 )
 
@@ -26,7 +32,7 @@ func (s *DelegateAggregateFactorySuite) TestCanRegisterAggregateFactoryDelegate(
 
 	c.Assert(err, IsNil)
 
-	id := yooid()
+	id := NewUUID()
 	c.Assert(s.factory.delegates[typeOf(&SomeAggregate{})](id),
 		DeepEquals,
 		NewSomeAggregate(id))
@@ -52,7 +58,7 @@ func (s *DelegateAggregateFactorySuite) TestCanGetAggregateInstanceFromString(c 
 	_ = s.factory.RegisterDelegate(&SomeAggregate{},
 		func(id string) AggregateRoot { return NewSomeAggregate(id) })
 
-	id := yooid()
+	id := NewUUID()
 	ev := s.factory.GetAggregate(typeOf(&SomeAggregate{}), id)
 	c.Assert(ev, DeepEquals, NewSomeAggregate(id))
 }

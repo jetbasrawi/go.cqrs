@@ -1,5 +1,5 @@
-#Yoono-CQRS
+#Go.CQRS
 
-CQRS and Event Sourcing implementation in Go
+##A Golang CQRS Reference implementation
 
 Work in progress

@@ -1,3 +1,8 @@
+// Copyright 2016 Jet Basrawi. All rights reserved.
+//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file.
+
 package ycq
 
 import (
@@ -9,26 +14,26 @@ var _ = Suite(&AggregateBaseSuite{})
 type AggregateBaseSuite struct{}
 
 func (s *AggregateBaseSuite) TestNewAggregateBase(c *C) {
-	id := yooid()
+	id := NewUUID()
 
 	agg := NewAggregateBase(id)
 
 	c.Assert(agg, NotNil)
 	c.Assert(agg.AggregateID(), Equals, id)
-	c.Assert(agg.Version(), Equals, 0)
+	c.Assert(agg.Version(), Equals, -1)
 }
 
 func (s *AggregateBaseSuite) TestIncrementVersion(c *C) {
-	agg := NewAggregateBase(yooid())
-	c.Assert(agg.Version(), Equals, 0)
+	agg := NewAggregateBase(NewUUID())
+	c.Assert(agg.Version(), Equals, -1)
 
 	agg.IncrementVersion()
 
-	c.Assert(agg.Version(), Equals, 1)
+	c.Assert(agg.Version(), Equals, 0)
 }
 
 func (s *AggregateBaseSuite) TestTrackOneChange(c *C) {
-	ev := NewTestEventMessage(yooid())
+	ev := NewTestEventMessage(NewUUID())
 	agg := NewSomeAggregate(ev.AggregateID())
 
 	agg.TrackChange(ev)
@@ -37,7 +42,7 @@ func (s *AggregateBaseSuite) TestTrackOneChange(c *C) {
 }
 
 func (s *AggregateBaseSuite) TestTrackMultipleChanges(c *C) {
-	agg := NewAggregateBase(yooid())
+	agg := NewAggregateBase(NewUUID())
 	ev1 := NewTestEventMessage(agg.AggregateID())
 	ev2 := NewTestEventMessage(agg.AggregateID())
 
@@ -48,7 +53,7 @@ func (s *AggregateBaseSuite) TestTrackMultipleChanges(c *C) {
 }
 
 func (s *AggregateBaseSuite) TestClearChanges(c *C) {
-	agg := NewAggregateBase(yooid())
+	agg := NewAggregateBase(NewUUID())
 	ev := NewTestEventMessage(agg.AggregateID())
 
 	agg.TrackChange(ev)

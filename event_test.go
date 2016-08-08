@@ -1,3 +1,8 @@
+// Copyright 2016 Jet Basrawi. All rights reserved.
+//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file.
+
 package ycq
 
 import (
@@ -21,12 +26,12 @@ type SomeOtherEvent struct {
 }
 
 func NewTestEventMessage(id string) *EventDescriptor {
-	ev := &SomeEvent{Item: yooid(), Count: rand.Intn(100)}
+	ev := &SomeEvent{Item: NewUUID(), Count: rand.Intn(100)}
 	return NewEventMessage(id, ev)
 }
 
 func (s *EventSuite) TestNewEventMessage(c *C) {
-	id := yooid()
+	id := NewUUID()
 	ev := &SomeEvent{Item: "Some String", Count: 43}
 
 	em := NewEventMessage(id, ev)
@@ -50,7 +55,7 @@ func (s *EventSuite) TestShouldGetTypeOfEvent(c *C) {
 
 func (s *EventSuite) TestShouldGetHeaders(c *C) {
 	ev := &SomeEvent{"Some data", 456}
-	em := NewEventMessage(yooid(), ev)
+	em := NewEventMessage(NewUUID(), ev)
 	em.headers["a"] = "b"
 
 	h := em.GetHeaders()
@@ -60,14 +65,14 @@ func (s *EventSuite) TestShouldGetHeaders(c *C) {
 
 func (s *EventSuite) TestShouldGetEvent(c *C) {
 	ev := &SomeEvent{"Some data", 456}
-	em := NewEventMessage(yooid(), ev)
+	em := NewEventMessage(NewUUID(), ev)
 	got := em.Event()
 	c.Assert(got, DeepEquals, em.event)
 }
 
 func (s *EventSuite) TestAddHeaderInt(c *C) {
 	ev := &SomeEvent{"Some data", 456}
-	em := NewEventMessage(yooid(), ev)
+	em := NewEventMessage(NewUUID(), ev)
 
 	em.SetHeader("a", 3)
 
@@ -76,7 +81,7 @@ func (s *EventSuite) TestAddHeaderInt(c *C) {
 
 func (s *EventSuite) TestAddHeaderString(c *C) {
 	ev := &SomeEvent{"Some data", 456}
-	em := NewEventMessage(yooid(), ev)
+	em := NewEventMessage(NewUUID(), ev)
 
 	em.SetHeader("a", "abc")
 
@@ -85,7 +90,7 @@ func (s *EventSuite) TestAddHeaderString(c *C) {
 
 func (s *EventSuite) TestAddHeaderStruct(c *C) {
 	ev := &SomeEvent{"Some data", 456}
-	em := NewEventMessage(yooid(), ev)
+	em := NewEventMessage(NewUUID(), ev)
 
 	em.SetHeader("a", ev)
 

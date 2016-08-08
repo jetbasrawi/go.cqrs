@@ -1,3 +1,8 @@
+// Copyright 2016 Jet Basrawi. All rights reserved.
+//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file.
+
 package ycq
 
 import (
@@ -21,7 +26,7 @@ func (s *InternalEventBusSuite) Test_NewHandlerEventBus(c *C) {
 
 func (s *InternalEventBusSuite) TestEventBusPublishesEventsToHandlers(c *C) {
 	h := NewMockEventHandler()
-	ev := NewTestEventMessage(yooid())
+	ev := NewTestEventMessage(NewUUID())
 	s.bus.AddHandler(h, &SomeEvent{})
 
 	s.bus.PublishEvent(ev)
@@ -29,30 +34,10 @@ func (s *InternalEventBusSuite) TestEventBusPublishesEventsToHandlers(c *C) {
 	c.Assert(h.events[0], Equals, ev)
 }
 
-func (s *InternalEventBusSuite) TestEventBusPublishesEventsToLocalHandlers(c *C) {
-	l := NewMockEventHandler()
-	ev := NewTestEventMessage(yooid())
-	s.bus.AddLocalHandler(l)
-
-	s.bus.PublishEvent(ev)
-
-	c.Assert(l.events[0], Equals, ev)
-}
-
-func (s *InternalEventBusSuite) TestEventBusPublishesEventsToGlobalHandlers(c *C) {
-	g := NewMockEventHandler()
-	ev := NewTestEventMessage(yooid())
-	s.bus.AddGlobalHandler(g)
-
-	s.bus.PublishEvent(ev)
-
-	c.Assert(g.events[0], Equals, ev)
-}
-
 func (s *InternalEventBusSuite) TestRegisterMultipleEventsForHandler(c *C) {
 	h := NewMockEventHandler()
-	ev1 := NewEventMessage(yooid(), &SomeEvent{Item: "Some Item", Count: 3456})
-	ev2 := NewEventMessage(yooid(), &SomeOtherEvent{OrderID: yooid()})
+	ev1 := NewEventMessage(NewUUID(), &SomeEvent{Item: "Some Item", Count: 3456})
+	ev2 := NewEventMessage(NewUUID(), &SomeOtherEvent{OrderID: NewUUID()})
 
 	s.bus.AddHandler(h, &SomeEvent{}, &SomeOtherEvent{})
 

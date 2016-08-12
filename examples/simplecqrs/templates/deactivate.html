@@ -1,0 +1,9 @@
+{{define "deactivate"}}
+{{template "header" .}}
+    <h1>Deactivate</h1>
+    <p class="lead">Deactivate the item.</p>
+    <form action="/deactivate/{{.ID}}" method="post">
+        <input type="submit" ></input>
+    </form>    
+{{template "footer" .}}
+{{end}}

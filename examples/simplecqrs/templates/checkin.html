@@ -1,0 +1,10 @@
+{{define "checkin"}}
+{{template "header" .}}
+    <h1>Check in</h1>
+    <p class="lead">Increase the number of this item in the inventory.</p>
+    <form action="/checkin/{{.ID}}" method="post">
+        <input type="text" name="number"></input>
+        <input type="submit" ></input>
+    </form>    
+{{template "footer" .}}
+{{end}}

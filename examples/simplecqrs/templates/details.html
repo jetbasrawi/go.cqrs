@@ -1,0 +1,14 @@
+{{define "details"}}
+{{template "header" .}}
+    <h1>Details</h1>
+    <p class="lead">Item details.</p>
+    Id: {{.ID}}</br>
+    Name: {{.Name}}</br>
+    Count: {{.CurrentCount}}</br></br>
+
+    <a href='/changename/{{.ID}}?version={{.Version}}'>Rename</a></br>
+    <a href='/deactivate/{{.ID}}?version={{.Version}}'>Deactivate</a></br>
+    <a href='/checkin/{{.ID}}?version={{.Version}}'>Check in</a></br>
+    <a href='/remove/{{.ID}}?version={{.Version}}'>Remove</a>
+{{template "footer" .}}
+{{end}}

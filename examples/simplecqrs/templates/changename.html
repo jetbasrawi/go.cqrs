@@ -1,0 +1,10 @@
+{{define "changename"}}
+{{template "header" .}}
+    <h1>Change name</h1>
+    <p class="lead">Change the name of the item.</p>
+    <form action="/changename/{{.ID}}" method="post">
+        <input type="text" name="name"></input>
+        <input type="submit" ></input>
+    </form>
+{{template "footer" .}}
+{{end}}

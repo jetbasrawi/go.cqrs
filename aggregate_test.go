@@ -5,9 +5,7 @@
 
 package ycq
 
-import (
-	. "gopkg.in/check.v1"
-)
+import . "gopkg.in/check.v1"
 
 var _ = Suite(&AggregateBaseSuite{})
 
@@ -20,16 +18,16 @@ func (s *AggregateBaseSuite) TestNewAggregateBase(c *C) {
 
 	c.Assert(agg, NotNil)
 	c.Assert(agg.AggregateID(), Equals, id)
-	c.Assert(agg.Version(), Equals, -1)
+	c.Assert(agg.OriginalVersion(), Equals, -1)
+	c.Assert(agg.CurrentVersion(), Equals, -1)
 }
 
 func (s *AggregateBaseSuite) TestIncrementVersion(c *C) {
 	agg := NewAggregateBase(NewUUID())
-	c.Assert(agg.Version(), Equals, -1)
+	c.Assert(agg.CurrentVersion(), Equals, -1)
 
 	agg.IncrementVersion()
-
-	c.Assert(agg.Version(), Equals, 0)
+	c.Assert(agg.CurrentVersion(), Equals, 0)
 }
 
 func (s *AggregateBaseSuite) TestTrackOneChange(c *C) {

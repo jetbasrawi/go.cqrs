@@ -1,0 +1,11 @@
+{{define "remove"}}
+{{template "header" .}}
+    <h1>Remove</h1>
+    <p class="lead">Decrease the number of items in the inventory.</p>
+    <form action="/remove/{{.ID}}" method="post">
+        <input type="text" name="number"></input>
+        <input type="submit" ></input>
+    </form>
+{{template "footer" .}}
+{{end}}<html>
+

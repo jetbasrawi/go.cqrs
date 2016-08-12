@@ -23,7 +23,8 @@ var (
 )
 
 type ComDomRepoSuite struct {
-	repo               *CommonDomainRepository
+	eventBus           EventBus
+	repo               *GetEventStoreCommonDomainRepo
 	someEvent          *SomeEvent
 	someMeta           map[string]string
 	someMockEvent      *mock.Event
@@ -82,9 +83,9 @@ func (s *ComDomRepoSuite) SetupSimulator(es []*mock.Event, m *mock.Event) {
 }
 
 func (s *ComDomRepoSuite) SetupDefaultRepo(client *goes.Client) {
-	eventBus := NewInternalEventBus()
+	s.eventBus = NewInternalEventBus()
 
-	s.repo, _ = NewCommonDomainRepository(client, eventBus)
+	s.repo, _ = NewCommonDomainRepository(client, s.eventBus)
 
 	aggregateFactory := NewDelegateAggregateFactory()
 	aggregateFactory.RegisterDelegate(&SomeAggregate{},
@@ -167,7 +168,10 @@ func (s *ComDomRepoSuite) TestRepositoryIncrementsAggregateVersionForEachEvent(c
 	id := NewUUID()
 	got, err := s.repo.Load(typeOf(&SomeAggregate{}), id)
 	c.Assert(err, IsNil)
-	c.Assert(got.Version(), Equals, 2)
+
+	// Version is a zero based index. The first item is zero
+	c.Assert(got.OriginalVersion(), Equals, 2)
+	c.Assert(got.CurrentVersion(), Equals, 2)
 }
 
 func (s *ComDomRepoSuite) TestSaveAggregateWithUncommittedChanges(c *C) {
@@ -196,10 +200,10 @@ func (s *ComDomRepoSuite) TestSaveAggregateWithUncommittedChanges(c *C) {
 	id := NewUUID()
 	agg := NewSomeAggregate(id)
 
-	em := NewEventMessage(id, someEvent)
+	em := NewEventMessage(id, someEvent, nil)
 	agg.TrackChange(em)
 
-	err := s.repo.Save(agg)
+	err := s.repo.Save(agg, nil)
 
 	c.Assert(err, IsNil)
 
@@ -281,7 +285,7 @@ func (s *ComDomRepoSuite) TestStreamNameIsBuiltByStreamNameDelegateOnSave(c *C) 
 		c.Assert(r.URL.String(), DeepEquals, fmt.Sprintf("/streams/%s", streamName))
 	})
 
-	err := s.repo.Save(agg)
+	err := s.repo.Save(agg, nil)
 
 	c.Assert(err, IsNil)
 }
@@ -310,7 +314,7 @@ func (s *ComDomRepoSuite) TestReturnsErrorOnSaveIfStreamNameDelegateNotRegistere
 	s.repo.SetStreamNameDelegate(streamNameDelegate)
 	agg := NewSomeAggregate(NewUUID())
 
-	err := s.repo.Save(agg)
+	err := s.repo.Save(agg, nil)
 
 	c.Assert(err, DeepEquals,
 		fmt.Errorf("There is no stream name delegate for aggregate of type \"%s\"",
@@ -321,7 +325,7 @@ func (s *ComDomRepoSuite) TestReturnsErrorOnSaveIfStreamNameDelegateIsNil(c *C) 
 	s.repo.streamNameDelegate = nil
 	agg := NewSomeAggregate(NewUUID())
 
-	err := s.repo.Save(agg)
+	err := s.repo.Save(agg, nil)
 
 	c.Assert(err, NotNil)
 	c.Assert(err, DeepEquals, fmt.Errorf("The common domain repository has no stream name delagate."))
@@ -355,7 +359,7 @@ func (s *ComDomRepoSuite) TestLoadReturnErrUnavailable(c *C) {
 
 	_, err := s.repo.Load(typeOf(agg), agg.AggregateID())
 	c.Assert(err, NotNil)
-	c.Assert(err, FitsTypeOf, &RepositoryUnavailableError{})
+	c.Assert(err, FitsTypeOf, &ErrRepositoryUnavailable{})
 
 }
 
@@ -369,9 +373,9 @@ func (s *ComDomRepoSuite) TestSaveReturnErrUnauthorized(c *C) {
 
 	id := NewUUID()
 	agg := NewSomeAggregate(id)
-	agg.TrackChange(NewEventMessage(NewUUID(), &SomeEvent{"Some data", 4}))
+	agg.TrackChange(NewEventMessage(NewUUID(), &SomeEvent{"Some data", 4}, nil))
 
-	err := s.repo.Save(agg)
+	err := s.repo.Save(agg, nil)
 	c.Assert(err, NotNil)
 	c.Assert(err, FitsTypeOf, &ErrUnauthorized{})
 
@@ -387,11 +391,11 @@ func (s *ComDomRepoSuite) TestSaveReturnErrUnavailable(c *C) {
 
 	id := NewUUID()
 	agg := NewSomeAggregate(id)
-	agg.TrackChange(NewEventMessage(NewUUID(), &SomeEvent{"Some data", 4}))
+	agg.TrackChange(NewEventMessage(NewUUID(), &SomeEvent{"Some data", 4}, nil))
 
-	err := s.repo.Save(agg)
+	err := s.repo.Save(agg, nil)
 	c.Assert(err, NotNil)
-	c.Assert(err, FitsTypeOf, &RepositoryUnavailableError{})
+	c.Assert(err, FitsTypeOf, &ErrRepositoryUnavailable{})
 
 }
 
@@ -433,7 +437,7 @@ func (s *ComDomRepoSuite) TestAggregateNotFoundError(c *C) {
 	agg, err := s.repo.Load(typeOf(&SomeAggregate{}), id)
 	c.Assert(agg, IsNil)
 	c.Assert(err, NotNil)
-	c.Assert(err, FitsTypeOf, &AggregateNotFoundError{AggregateID: id, AggregateType: typeOf(&SomeAggregate{})})
+	c.Assert(err, FitsTypeOf, &ErrAggregateNotFound{AggregateID: id, AggregateType: typeOf(&SomeAggregate{})})
 }
 
 func (s *ComDomRepoSuite) TestSaveReturnsConncurrencyException(c *C) {
@@ -446,12 +450,12 @@ func (s *ComDomRepoSuite) TestSaveReturnsConncurrencyException(c *C) {
 
 	id := NewUUID()
 	agg := NewSomeAggregate(id)
-	agg.TrackChange(NewEventMessage(NewUUID(), &SomeEvent{"Some data", 4}))
+	agg.TrackChange(NewEventMessage(NewUUID(), &SomeEvent{"Some data", 4}, nil))
 
-	err := s.repo.Save(agg)
+	err := s.repo.Save(agg, Int(-1))
 
 	streamName, _ := s.repo.streamNameDelegate.GetStreamName(typeOf(agg), id)
-	c.Assert(err, DeepEquals, &ConcurrencyError{Aggregate: agg, ExpectedVersion: -1, StreamName: streamName})
+	c.Assert(err, DeepEquals, &ErrConcurrencyViolation{Aggregate: agg, ExpectedVersion: Int(-1), StreamName: streamName})
 }
 
 func (s *ComDomRepoSuite) TestSaveUnhandledErrors(c *C) {
@@ -464,16 +468,54 @@ func (s *ComDomRepoSuite) TestSaveUnhandledErrors(c *C) {
 
 	id := NewUUID()
 	agg := NewSomeAggregate(id)
-	agg.TrackChange(NewEventMessage(NewUUID(), &SomeEvent{"Some data", 4}))
+	agg.TrackChange(NewEventMessage(NewUUID(), &SomeEvent{"Some data", 4}, nil))
 
-	err := s.repo.Save(agg)
+	err := s.repo.Save(agg, nil)
 	c.Assert(err, NotNil)
 	c.Assert(err, FitsTypeOf, &ErrUnexpected{})
 
 }
 
+func (s *ComDomRepoSuite) TestNewEventsArePublishedOnSave(c *C) {
+	fakeHandler := &FakeEventHandler{}
+	s.eventBus.AddHandler(fakeHandler, &SomeEvent{}, &SomeOtherEvent{})
+
+	em1 := NewEventMessage(NewUUID(), &SomeEvent{"--------PUBLISH", 456}, nil)
+	em2 := NewEventMessage(NewUUID(), &SomeOtherEvent{"--------PUBLISH"}, nil)
+
+	agg := NewSomeAggregate(NewUUID())
+	agg.TrackChange(em1)
+	agg.TrackChange(em2)
+
+	s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		c.Assert(r.Method, Equals, http.MethodPost)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, "")
+	})
+
+	err := s.repo.Save(agg, Int(agg.OriginalVersion()))
+	c.Assert(err, IsNil)
+
+	//spew.Dump(s.eventBus)
+
+	c.Assert(fakeHandler.Events, HasLen, 2)
+	got1 := fakeHandler.Events[0].Version()
+	got2 := fakeHandler.Events[1].Version()
+	c.Assert(*got1, Equals, 0)
+	c.Assert(*got2, Equals, 1)
+
+}
+
 //////////////////////////////////////////////////////////////////////////////
 // Fakes
+
+type FakeEventHandler struct {
+	Events []EventMessage
+}
+
+func (h *FakeEventHandler) Handle(message EventMessage) {
+	h.Events = append(h.Events, message)
+}
 
 func NewStubAggregate(id string) *StubAggregate {
 	return &StubAggregate{

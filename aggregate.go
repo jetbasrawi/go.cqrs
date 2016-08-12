@@ -8,7 +8,8 @@ package ycq
 //AggregateRoot is the interface that all aggregates should implement
 type AggregateRoot interface {
 	AggregateID() string
-	Version() int
+	OriginalVersion() int
+	CurrentVersion() int
 	IncrementVersion()
 	Apply(events EventMessage, isNew bool)
 	TrackChange(EventMessage)
@@ -42,13 +43,24 @@ func (a *AggregateBase) AggregateID() string {
 	return a.id
 }
 
-// Version returns the version of the aggregate.
+// OriginalVersion returns the version of the aggregate as it was when it was
+// instantiated or loaded from the repository.
 //
 // Importantly an aggregate with one event applied will be at version 0
 // this allows the aggregates to match the version in the eventstore where
 // the first event will be version 0.
-func (a *AggregateBase) Version() int {
+func (a *AggregateBase) OriginalVersion() int {
 	return a.version
+}
+
+// CurrentVersion returns the version of the aggregate as it was when it was
+// instantiated or loaded from the repository.
+//
+// Importantly an aggregate with one event applied will be at version 0
+// this allows the aggregates to match the version in the eventstore where
+// the first event will be version 0.
+func (a *AggregateBase) CurrentVersion() int {
+	return a.version + len(a.changes)
 }
 
 // IncrementVersion increments the aggregate version number by one.

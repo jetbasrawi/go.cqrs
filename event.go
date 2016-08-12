@@ -25,6 +25,9 @@ type EventMessage interface {
 
 	// EventType returns a string descriptor of the command name
 	EventType() string
+
+	// Version returns the version of the event
+	Version() *int
 }
 
 // EventDescriptor is an implementation of the event message interface.
@@ -32,14 +35,16 @@ type EventDescriptor struct {
 	id      string
 	event   interface{}
 	headers map[string]interface{}
+	version *int
 }
 
 // NewEventMessage returns a new event descriptor
-func NewEventMessage(aggregateID string, event interface{}) *EventDescriptor {
+func NewEventMessage(aggregateID string, event interface{}, version *int) *EventDescriptor {
 	return &EventDescriptor{
 		id:      aggregateID,
 		event:   event,
 		headers: make(map[string]interface{}),
+		version: version,
 	}
 }
 
@@ -66,4 +71,9 @@ func (c *EventDescriptor) SetHeader(key string, value interface{}) {
 // Event the event payload of the event message
 func (c *EventDescriptor) Event() interface{} {
 	return c.event
+}
+
+// Version returns the version of the event
+func (c *EventDescriptor) Version() *int {
+	return c.version
 }

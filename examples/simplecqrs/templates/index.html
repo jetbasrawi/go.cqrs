@@ -1,0 +1,9 @@
+{{define "index"}}
+{{template "header" .}}
+        <h1>Home</h1>
+        <ul>
+            {{range .}}<li><a href='/details/{{.ID}}'>{{.Name}}</a></li>{{end}}
+        </ul>        
+        <a href=/add>Add</a>
+{{template "footer" .}}
+{{end}}

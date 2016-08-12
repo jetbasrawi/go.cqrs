@@ -1,0 +1,11 @@
+{{define "add"}}
+{{template "header" .}}
+    <h1>Add</h1>
+    <p class="lead">Add a new inventory item.</p>
+    <form action="/add" method="post">
+        <input type="text" name="name"></input>
+        <input type="submit" ></input>
+    </form>
+{{template "footer" .}}
+{{end}}
+ 

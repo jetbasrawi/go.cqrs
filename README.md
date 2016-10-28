@@ -43,10 +43,7 @@ implement the pattern in Golang and also as a foundation upon which to build you
 All implementations are easily replaced to suit your particular requirements.
 
 ##Example code
-The examples folder contains a simple and clear example of how to use go.cqrs to contruct your service.
-
-As much as possible, the example application replicates the classic reference implementation [m-r](https://github.com/gregoryyoung/m-r) by [Greg Young](https://github.com/gregoryyoung).
-
+The examples folder contains a simple and clear example of how to use go.cqrs to contruct your service. The example is a port of the classic reference implementation [m-r](https://github.com/gregoryyoung/m-r) by [Greg Young](https://github.com/gregoryyoung).
 
 ##Getting Started
 

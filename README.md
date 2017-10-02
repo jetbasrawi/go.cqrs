@@ -1,7 +1,7 @@
-#Go.CQRS [![license](https://img.shields.io/badge/license-MIT-blue.svg?maxAge=2592000)](https://github.com/jetbasrawi/go.cqrs/blob/master/LICENSE.md) [![Go Report Card](https://goreportcard.com/badge/github.com/jetbasrawi/go.cqrs)](https://goreportcard.com/report/github.com/jetbasrawi/go.cqrs) [![GoDoc](https://godoc.org/github.com/jetbasrawi/go.cqrs?status.svg)](https://godoc.org/github.com/jetbasrawi/go.cqrs)
+# Go.CQRS [![license](https://img.shields.io/badge/license-MIT-blue.svg?maxAge=2592000)](https://github.com/jetbasrawi/go.cqrs/blob/master/LICENSE.md) [![Go Report Card](https://goreportcard.com/badge/github.com/jetbasrawi/go.cqrs)](https://goreportcard.com/report/github.com/jetbasrawi/go.cqrs) [![GoDoc](https://godoc.org/github.com/jetbasrawi/go.cqrs?status.svg)](https://godoc.org/github.com/jetbasrawi/go.cqrs)
 
 
-##A Golang CQRS Reference implementation
+## A Golang CQRS Reference implementation
 
 Go.CQRS provides interfaces and implementations to support a CQRS implementation in Golang. The examples 
 directory contains a sample application that demonstrates how to use Go.CQRS.
@@ -26,7 +26,7 @@ If you are new to CQRS or simply interested in best practices there is a great 6
 Once the pattern is understood, implementations such as Go.CQRS can be used as a reference for learning how to 
 implement the pattern in Golang and also as a foundation upon which to build your CQRS implementation.
 
-##What does Go.CQRS provide?
+## What does Go.CQRS provide?
 
 |Feature|Description|
 |-------|-----------|
@@ -42,10 +42,10 @@ implement the pattern in Golang and also as a foundation upon which to build you
 
 All implementations are easily replaced to suit your particular requirements.
 
-##Example code
+## Example code
 The examples folder contains a simple and clear example of how to use go.cqrs to contruct your service. The example is a port of the classic reference implementation [m-r](https://github.com/gregoryyoung/m-r) by [Greg Young](https://github.com/gregoryyoung).
 
-##Getting Started
+## Getting Started
 
 ```
     $ go get github.com/jetbasrawi/go.cqrs

@@ -52,4 +52,4 @@ The examples folder contains a simple and clear example of how to use go.cqrs to
 
 ```
 
-Refer to the example application for guidance on how to use Go.CQRS
+Refer to the example application for guidance on how to use Go.CQRS.

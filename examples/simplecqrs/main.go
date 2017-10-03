@@ -20,7 +20,7 @@ func init() {
 
 	// Configure the read model
 
-	// Create a reamodel instance
+	// Create a readModel instance
 	readModel = simplecqrs.NewReadModel()
 
 	// Create a InventoryListView

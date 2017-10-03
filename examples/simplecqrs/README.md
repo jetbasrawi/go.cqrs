@@ -1,4 +1,4 @@
-#Simple CQRS
+# Simple CQRS
 
 Simple CQRS is a Golang implementation of the cononical CQRS example application written by Greg Young.
 

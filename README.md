@@ -15,7 +15,7 @@ CQRS is an architectural pattern. When implementing the CQRS pattern, it is easy
 could be packaged into a framework. However, it is recommended that those working with CQRS focus on learning
 the underlying detail of the pattern rather than simply use a framework.
 
-The implementation of the CQRS pattern is not especially difficult, however it is a steep learning curve becasue 
+The implementation of the CQRS pattern is not especially difficult, however it is a steep learning curve because 
 the pattern is very different to the traditional non CQRS architecture. Topics such as Aggregate Design are very 
 different. If you are going to use EventSourcing and eventual consistency then there is a lot of learning to be 
 done.

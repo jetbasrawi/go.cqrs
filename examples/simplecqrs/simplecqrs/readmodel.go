@@ -144,7 +144,7 @@ func (v *InventoryItemDetailView) Handle(message ycq.EventMessage) {
 			log.Fatal(err)
 		}
 		d.Name = event.NewName
-		d.Version = event.Original
+		d.Version = *message.Version()
 
 	case *ItemsRemovedFromInventory:
 
@@ -174,7 +174,7 @@ func (v *InventoryItemDetailView) GetDetailsItem(id string) (*InventoryItemDetai
 
 	d, ok := bullShitDatabase.Details[id]
 	if !ok {
-		return nil, errors.New("Did not find the original inventory this shouldnt not happen")
+		return nil, errors.New("did not find the original inventory this shouldn't not happen")
 	}
 
 	return d, nil

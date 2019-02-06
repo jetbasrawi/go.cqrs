@@ -37,7 +37,7 @@ func (r *InMemoryRepo) Load(aggregateType, id string) (*InventoryItem, error) {
 }
 
 // Save persists an aggregate.
-func (r *InMemoryRepo) Save(aggregate ycq.AggregateRoot) error {
+func (r *InMemoryRepo) Save(aggregate ycq.AggregateRoot, _ *int) error {
 
 	//TODO: Look at the expected version
 	for _, v := range aggregate.GetChanges() {

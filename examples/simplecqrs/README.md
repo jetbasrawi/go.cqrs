@@ -11,3 +11,12 @@ however I think the result is easy to read and understand.
 I have tried to strike a balance between remaining true to the original implementation to aid understanding 
 and following Golang idioms. 
 
+## How to use
+
+```
+$ go run main.go
+```
+
+The project will serve a web application on http://localhost:8088 which allows you to add and modify items in an inventory.
+
+

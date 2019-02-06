@@ -15,7 +15,7 @@ CQRS is an architectural pattern. When implementing the CQRS pattern, it is easy
 could be packaged into a framework. However, it is recommended that those working with CQRS focus on learning
 the underlying detail of the pattern rather than simply use a framework.
 
-The implementation of the CQRS pattern is not especially difficult, however it is a steep learning curve becasue 
+The implementation of the CQRS pattern is not especially difficult, however it is a steep learning curve because 
 the pattern is very different to the traditional non CQRS architecture. Topics such as Aggregate Design are very 
 different. If you are going to use EventSourcing and eventual consistency then there is a lot of learning to be 
 done.
@@ -32,7 +32,7 @@ implement the pattern in Golang and also as a foundation upon which to build you
 |-------|-----------|
 | **Aggregate** | AggregateRoot interface and Aggregate base type that can be embedded in your own types to provide common functions required by aggregates |
 | **Event** | An Event interface and an EventDescriptor which is a message envelope for events. Events in Go.CQRS are simply plain Go structs and there are no magic strings to describe them as is the case in some other Go implementations. |
-| **Command** | A Command interface and an CommandDescriptor which is a message envelope for commands. Events in Go.CQRS are simply plain Go structs and there are no magic strings to describe them as is the case in some other Go implementations. | 
+| **Command** | A Command interface and an CommandDescriptor which is a message envelope for commands. Commands in Go.CQRS are simply plain Go structs and there are no magic strings to describe them as is the case in some other Go implementations. | 
 | **CommandHandler**| Interface and base functionality for chaining command handlers |
 | **Dispatcher** | Dispatcher interface and an in memory dispatcher implementation |
 | **EventBus** | EventBus interface and in memory implementation |

@@ -53,12 +53,10 @@ func (a *AggregateBase) OriginalVersion() int {
 	return a.version
 }
 
-// CurrentVersion returns the version of the aggregate as it was when it was
-// instantiated or loaded from the repository.
+// CurrentVersion returns the version of the aggregate in its current state
 //
-// Importantly an aggregate with one event applied will be at version 0
-// this allows the aggregates to match the version in the eventstore where
-// the first event will be version 0.
+// CurrentVersion is derived from the original version plus the number of
+// changes that it is tracking.
 func (a *AggregateBase) CurrentVersion() int {
 	return a.version + len(a.changes)
 }

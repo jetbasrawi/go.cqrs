@@ -65,14 +65,16 @@ func init() {
 	dispatcher = ycq.NewInMemoryDispatcher()
 	// Register the inventory command handlers instance as a command handler
 	// for the events specified.
-	dispatcher.RegisterHandler(inventoryCommandHandler,
+	err = dispatcher.RegisterHandler(inventoryCommandHandler,
 		&simplecqrs.CreateInventoryItem{},
 		&simplecqrs.DeactivateInventoryItem{},
 		&simplecqrs.RenameInventoryItem{},
 		&simplecqrs.CheckInItemsToInventory{},
 		&simplecqrs.RemoveItemsFromInventory{},
 	)
-
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func main() {

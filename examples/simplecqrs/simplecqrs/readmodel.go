@@ -144,7 +144,6 @@ func (v *InventoryItemDetailView) Handle(message ycq.EventMessage) {
 			log.Fatal(err)
 		}
 		d.Name = event.NewName
-		d.Version = event.Original
 
 	case *ItemsRemovedFromInventory:
 

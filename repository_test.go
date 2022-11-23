@@ -125,7 +125,7 @@ func (s *ComDomRepoSuite) TestCreatingNewRepositoryWithNilEventStoreReturnsAnErr
 	repo, err := NewCommonDomainRepository(nil, eventBus)
 
 	c.Assert(repo, IsNil)
-	c.Assert(err, DeepEquals, fmt.Errorf("Nil Eventstore injected into repository."))
+	c.Assert(err, DeepEquals, fmt.Errorf("nil Eventstore injected into repository"))
 }
 
 func (s *ComDomRepoSuite) TestCreatingNewRepositoryWithNilEventBusReturnsAnError(c *C) {
@@ -133,7 +133,7 @@ func (s *ComDomRepoSuite) TestCreatingNewRepositoryWithNilEventBusReturnsAnError
 	repo, err := NewCommonDomainRepository(store, nil)
 
 	c.Assert(repo, IsNil)
-	c.Assert(err, DeepEquals, fmt.Errorf("Nil EventBus injected into repository."))
+	c.Assert(err, DeepEquals, fmt.Errorf("nil EventBus injected into repository"))
 }
 
 func (s *ComDomRepoSuite) TestRepositoryCanLoadAggregateWithEvents(c *C) {
@@ -224,7 +224,7 @@ func (s *ComDomRepoSuite) TestNoAggregateFactoryReturnsErrorOnLoad(c *C) {
 	agg, err := s.repo.Load(typeOf(NewSomeAggregate(id)), id)
 
 	c.Assert(err, NotNil)
-	c.Assert(err, ErrorMatches, "The common domain repository has no Aggregate Factory.")
+	c.Assert(err, ErrorMatches, "the common domain repository has no Aggregate Factory")
 	c.Assert(agg, IsNil)
 }
 
@@ -238,7 +238,7 @@ func (s *ComDomRepoSuite) TestRepositoryReturnsAnErrorIfAggregateFactoryNotRegis
 	agg, err := s.repo.Load(aggregateTypeName, id)
 
 	c.Assert(err, DeepEquals,
-		fmt.Errorf("The repository has no aggregate factory registered for aggregate type: %s",
+		fmt.Errorf("the repository has no aggregate factory registered for aggregate type: %s",
 			aggregateTypeName))
 	c.Assert(agg, IsNil)
 }
@@ -263,7 +263,7 @@ func (s *ComDomRepoSuite) TestReturnsErrorOnLoadIfStreamNameDelegateNotRegistere
 
 	c.Assert(agg, IsNil)
 	c.Assert(err, DeepEquals,
-		fmt.Errorf("There is no stream name delegate for aggregate of type \"%s\"",
+		fmt.Errorf("there is no stream name delegate for aggregate of type \"%s\"",
 			typeName))
 }
 
@@ -317,7 +317,7 @@ func (s *ComDomRepoSuite) TestReturnsErrorOnSaveIfStreamNameDelegateNotRegistere
 	err := s.repo.Save(agg, nil)
 
 	c.Assert(err, DeepEquals,
-		fmt.Errorf("There is no stream name delegate for aggregate of type \"%s\"",
+		fmt.Errorf("there is no stream name delegate for aggregate of type \"%s\"",
 			typeOf(agg)))
 }
 
@@ -328,7 +328,7 @@ func (s *ComDomRepoSuite) TestReturnsErrorOnSaveIfStreamNameDelegateIsNil(c *C) 
 	err := s.repo.Save(agg, nil)
 
 	c.Assert(err, NotNil)
-	c.Assert(err, DeepEquals, fmt.Errorf("The common domain repository has no stream name delagate."))
+	c.Assert(err, DeepEquals, fmt.Errorf("the common domain repository has no stream name delagate"))
 }
 
 func (s *ComDomRepoSuite) TestLoadReturnErrUnauthorized(c *C) {
@@ -405,7 +405,7 @@ func (s *ComDomRepoSuite) TestReturnsErrorOnLoadIfStreamNameDelegateIsNil(c *C) 
 	_, err := s.repo.Load("", NewUUID())
 
 	c.Assert(err, NotNil)
-	c.Assert(err, DeepEquals, fmt.Errorf("The common domain repository has no stream name delegate."))
+	c.Assert(err, DeepEquals, fmt.Errorf("the common domain repository has no stream name delegate"))
 }
 
 func (s *ComDomRepoSuite) TestReturnsErrorOnLoadIfEventFactoryNotRegistered(c *C) {
@@ -413,7 +413,7 @@ func (s *ComDomRepoSuite) TestReturnsErrorOnLoadIfEventFactoryNotRegistered(c *C
 
 	agg, err := s.repo.Load(typeOf(&SomeAggregate{}), NewUUID())
 
-	c.Assert(err, DeepEquals, fmt.Errorf("The common domain has no Event Factory."))
+	c.Assert(err, DeepEquals, fmt.Errorf("the common domain has no Event Factory"))
 	c.Assert(agg, IsNil)
 }
 
@@ -440,7 +440,7 @@ func (s *ComDomRepoSuite) TestAggregateNotFoundError(c *C) {
 	c.Assert(err, FitsTypeOf, &ErrAggregateNotFound{AggregateID: id, AggregateType: typeOf(&SomeAggregate{})})
 }
 
-func (s *ComDomRepoSuite) TestSaveReturnsConncurrencyException(c *C) {
+func (s *ComDomRepoSuite) TestSaveReturnsConcurrencyException(c *C) {
 
 	s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		c.Assert(r.Method, Equals, http.MethodPost)

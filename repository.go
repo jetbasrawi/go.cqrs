@@ -14,10 +14,10 @@ import (
 
 // DomainRepository is the interface that all domain repositories should implement.
 type DomainRepository interface {
-	//Loads an aggregate of the given type and ID
+	// Load Loads an aggregate of the given type and ID
 	Load(aggregateTypeName string, aggregateID string) (AggregateRoot, error)
 
-	//Saves the aggregate.
+	// Save Saves the aggregate.
 	Save(aggregate AggregateRoot, expectedVersion *int) error
 }
 
@@ -34,11 +34,11 @@ type GetEventStoreCommonDomainRepo struct {
 // NewCommonDomainRepository constructs a new CommonDomainRepository
 func NewCommonDomainRepository(eventStore *goes.Client, eventBus EventBus) (*GetEventStoreCommonDomainRepo, error) {
 	if eventStore == nil {
-		return nil, fmt.Errorf("Nil Eventstore injected into repository.")
+		return nil, fmt.Errorf("nil Eventstore injected into repository")
 	}
 
 	if eventBus == nil {
-		return nil, fmt.Errorf("Nil EventBus injected into repository.")
+		return nil, fmt.Errorf("nil EventBus injected into repository")
 	}
 
 	d := &GetEventStoreCommonDomainRepo{
@@ -49,10 +49,10 @@ func NewCommonDomainRepository(eventStore *goes.Client, eventBus EventBus) (*Get
 }
 
 // SetAggregateFactory sets the aggregate factory that should be used to
-// instantate aggregate instances
+// instantiate aggregate instances
 //
 // Only one AggregateFactory can be registered at any one time.
-// Any registration will overwrite the provious registration.
+// Any registration will overwrite the previous registration.
 func (r *GetEventStoreCommonDomainRepo) SetAggregateFactory(factory AggregateFactory) {
 	r.aggregateFactory = factory
 }
@@ -79,20 +79,20 @@ func (r *GetEventStoreCommonDomainRepo) SetStreamNameDelegate(delegate StreamNam
 func (r *GetEventStoreCommonDomainRepo) Load(aggregateType, id string) (AggregateRoot, error) {
 
 	if r.aggregateFactory == nil {
-		return nil, fmt.Errorf("The common domain repository has no Aggregate Factory.")
+		return nil, fmt.Errorf("the common domain repository has no Aggregate Factory")
 	}
 
 	if r.streamNameDelegate == nil {
-		return nil, fmt.Errorf("The common domain repository has no stream name delegate.")
+		return nil, fmt.Errorf("the common domain repository has no stream name delegate")
 	}
 
 	if r.eventFactory == nil {
-		return nil, fmt.Errorf("The common domain has no Event Factory.")
+		return nil, fmt.Errorf("the common domain has no Event Factory")
 	}
 
 	aggregate := r.aggregateFactory.GetAggregate(aggregateType, id)
 	if aggregate == nil {
-		return nil, fmt.Errorf("The repository has no aggregate factory registered for aggregate type: %s", aggregateType)
+		return nil, fmt.Errorf("the repository has no aggregate factory registered for aggregate type: %s", aggregateType)
 	}
 
 	streamName, err := r.streamNameDelegate.GetStreamName(aggregateType, id)
@@ -141,7 +141,7 @@ func (r *GetEventStoreCommonDomainRepo) Load(aggregateType, id string) (Aggregat
 func (r *GetEventStoreCommonDomainRepo) Save(aggregate AggregateRoot, expectedVersion *int) error {
 
 	if r.streamNameDelegate == nil {
-		return fmt.Errorf("The common domain repository has no stream name delagate.")
+		return fmt.Errorf("the common domain repository has no stream name delagate")
 	}
 
 	resultEvents := aggregate.GetChanges()

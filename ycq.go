@@ -8,7 +8,7 @@
 // The implementation follows as much as possible the classic reference implementation
 // m-r by Greg Young.
 //
-// The implmentation differs in a number of respects becasue the original is written
+// The implementation differs in a number of respects because the original is written
 // in C# and uses Generics where generics are not available in Go.
 // This implementation instead uses interfaces to deal with types in a generic manner
 // and used delegate functions to instantiate specific types.

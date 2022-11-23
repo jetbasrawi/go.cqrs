@@ -50,7 +50,7 @@ func (s *DelegateAggregateFactorySuite) TestDuplicateAggregateFactoryRegistratio
 	c.Assert(err, NotNil)
 	c.Assert(err,
 		DeepEquals,
-		fmt.Errorf("Factory delegate already registered for type: \"%s\"",
+		fmt.Errorf("factory delegate already registered for type: \"%s\"",
 			typeOf(&SomeAggregate{})))
 }
 

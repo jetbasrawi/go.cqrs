@@ -5,7 +5,7 @@
 
 package ycq
 
-// EventBus is the inteface that an event bus must implement.
+// EventBus is the interface that an event bus must implement.
 type EventBus interface {
 	PublishEvent(EventMessage)
 	AddHandler(EventHandler, ...interface{})
@@ -33,7 +33,7 @@ func (b *InternalEventBus) PublishEvent(event EventMessage) {
 	}
 }
 
-// AddHandler registers an event handler for all of the events specified in the
+// AddHandler registers an event handler for all the events specified in the
 // variadic events parameter.
 func (b *InternalEventBus) AddHandler(handler EventHandler, events ...interface{}) {
 

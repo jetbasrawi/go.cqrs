@@ -75,7 +75,7 @@ func (s *DelegateStreamNamerSuite) TestGetStreamNameReturnsAnErrorIfNoDelegateRe
 	stream, err := s.namer.GetStreamName(typeOf(agg), agg.AggregateID())
 	c.Assert(err, NotNil)
 	c.Assert(stream, Equals, "")
-	c.Assert(err, DeepEquals, fmt.Errorf("There is no stream name delegate for aggregate of type \"%s\"",
+	c.Assert(err, DeepEquals, fmt.Errorf("there is no stream name delegate for aggregate of type \"%s\"",
 		typeOf(agg)))
 
 }
@@ -91,6 +91,6 @@ func (s *DelegateStreamNamerSuite) TestRegisteringAStreamNameDelegateMoreThanOnc
 		&SomeAggregate{},
 	)
 	c.Assert(err, DeepEquals,
-		fmt.Errorf("The stream name delegate for \"%s\" is already registered with the stream namer.",
+		fmt.Errorf("the stream name delegate for \"%s\" is already registered with the stream namer",
 			typeOf(NewSomeAggregate(NewUUID()))))
 }

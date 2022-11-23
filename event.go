@@ -20,7 +20,7 @@ type EventMessage interface {
 	// SetHeader sets the value of the header specified by the key
 	SetHeader(string, interface{})
 
-	// Returns the actual event which is the payload of the event message.
+	// Event Returns the actual event which is the payload of the event message.
 	Event() interface{}
 
 	// EventType returns a string descriptor of the command name

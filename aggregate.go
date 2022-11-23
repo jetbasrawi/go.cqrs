@@ -5,7 +5,7 @@
 
 package ycq
 
-//AggregateRoot is the interface that all aggregates should implement
+// AggregateRoot is the interface that all aggregates should implement
 type AggregateRoot interface {
 	AggregateID() string
 	OriginalVersion() int
@@ -18,7 +18,7 @@ type AggregateRoot interface {
 }
 
 // AggregateBase is a type that can be embedded in an AggregateRoot
-// implementation to handle common aggragate behaviour
+// implementation to handle common aggregate behaviour
 //
 // All required methods to implement an aggregate are here, to implement the
 // Aggregate root interface your aggregate will need to implement the Apply
@@ -29,7 +29,7 @@ type AggregateBase struct {
 	changes []EventMessage
 }
 
-// NewAggregateBase contructs a new AggregateBase.
+// NewAggregateBase constructs a new AggregateBase.
 func NewAggregateBase(id string) *AggregateBase {
 	return &AggregateBase{
 		id:      id,
@@ -81,7 +81,7 @@ func (a *AggregateBase) GetChanges() []EventMessage {
 	return a.changes
 }
 
-//ClearChanges removes all unpersisted events from the aggregate.
+// ClearChanges removes all unpersisted events from the aggregate.
 func (a *AggregateBase) ClearChanges() {
 	a.changes = []EventMessage{}
 }

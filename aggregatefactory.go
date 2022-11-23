@@ -24,22 +24,22 @@ type DelegateAggregateFactory struct {
 	delegates map[string]func(string) AggregateRoot
 }
 
-// NewDelegateAggregateFactory contructs a new DelegateAggregateFactory
+// NewDelegateAggregateFactory constructs a new DelegateAggregateFactory
 func NewDelegateAggregateFactory() *DelegateAggregateFactory {
 	return &DelegateAggregateFactory{
 		delegates: make(map[string]func(string) AggregateRoot),
 	}
 }
 
-// RegisterDelegate is used to register a new funtion for instantiation of an
+// RegisterDelegate is used to register a new function for instantiation of an
 // aggregate instance.
 //
-// 	func(id string) AggregateRoot {return NewMyAggregateType(id)}
-// 	func(id string) AggregateRoot { return &MyAggregateType{AggregateBase:NewAggregateBase(id)} }
+//	func(id string) AggregateRoot {return NewMyAggregateType(id)}
+//	func(id string) AggregateRoot { return &MyAggregateType{AggregateBase:NewAggregateBase(id)} }
 func (t *DelegateAggregateFactory) RegisterDelegate(aggregate AggregateRoot, delegate func(string) AggregateRoot) error {
 	typeName := typeOf(aggregate)
 	if _, ok := t.delegates[typeName]; ok {
-		return fmt.Errorf("Factory delegate already registered for type: \"%s\"", typeName)
+		return fmt.Errorf("factory delegate already registered for type: \"%s\"", typeName)
 	}
 	t.delegates[typeName] = delegate
 	return nil
